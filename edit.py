@@ -223,7 +223,8 @@ def fix_NO2(mol):
     k = len(radicals)
     assert atomic_num==[6,7] and k%2==0
     radicals = sorted(radicals, key=lambda atom: atom.GetAtomicNum())
-    C_atoms, N_atoms = radicals[:k/2], radicals[k/2:]
+    cut = int(k/2)
+    C_atoms, N_atoms = radicals[:cut], radicals[cut:]
     for C_atom, N_atom in zip(C_atoms, N_atoms):
         O_atom = None
         for atom in N_atom.GetNeighbors():
