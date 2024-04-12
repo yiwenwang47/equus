@@ -214,26 +214,29 @@ def rm_radicals(smi):
 
 def fix_NO2(mol):
     '''
-    deals with the special case where two radicals exist, one on the N in NO2
-    the other on a random C atom
-
+    deals with the special case where multiple radicals exist, half of them on the N in NO2
+    the other half on C atoms
     '''
     mol = copy.deepcopy(mol)
     radicals = [atom for atom in mol.GetAtoms() if atom.GetNumRadicalElectrons() > 0]
-    C_atom, N_atom = sorted(radicals, key=lambda atom: atom.GetAtomicNum())
-    assert C_atom.GetAtomicNum()==6 and N_atom.GetAtomicNum()==7
-    O_atom = None
-    for atom in N_atom.GetNeighbors():
-        if atom.GetAtomicNum()==8:
-            O_atom = atom
-            break
-    bond = mol.GetBondBetweenAtoms(N_atom.GetIdx(), O_atom.GetIdx())
-    bond.SetBondType(Chem.rdchem.BondType.DOUBLE)
-    N_atom.SetNumRadicalElectrons(0)
-    N_atom.SetFormalCharge(1)
-    O_atom.SetFormalCharge(0)
-    C_atom.SetNumRadicalElectrons(0)
-    C_atom.SetFormalCharge(0)
+    atomic_num = sorted(set([atom.GetAtomicNum() for atom in radicals]))
+    k = len(radicals)
+    assert atomic_num==[6,7] and k%2==0
+    radicals = sorted(radicals, key=lambda atom: atom.GetAtomicNum())
+    C_atoms, N_atoms = radicals[:k/2], radicals[k/2:]
+    for C_atom, N_atom in zip(C_atoms, N_atoms):
+        O_atom = None
+        for atom in N_atom.GetNeighbors():
+            if atom.GetAtomicNum()==8:
+                O_atom = atom
+                break
+        bond = mol.GetBondBetweenAtoms(N_atom.GetIdx(), O_atom.GetIdx())
+        bond.SetBondType(Chem.rdchem.BondType.DOUBLE)
+        N_atom.SetNumRadicalElectrons(0)
+        N_atom.SetFormalCharge(1)
+        O_atom.SetFormalCharge(0)
+        C_atom.SetNumRadicalElectrons(0)
+        C_atom.SetFormalCharge(0)
     return mol
 
 def primary_diamine_to_diimine(smi: str) -> str:
