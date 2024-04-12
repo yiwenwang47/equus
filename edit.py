@@ -1,5 +1,5 @@
 from rdkit import Chem
-from rdkit.Chem import Draw, rdmolops
+from rdkit.Chem import rdmolops, Descriptors, rdDetermineBonds
 from .iso import *
 import copy
 
@@ -12,6 +12,17 @@ All editing functions are based on rdkit utilities.
 def clean(mol):
     smiles = Chem.MolToSmiles(mol)
     mol = Chem.MolFromSmiles(smiles, sanitize=False)
+    return mol
+
+def create_smiles(mol):
+    return Chem.CanonSmiles(Chem.MolToSmiles(mol))
+
+def read_smiles(smiles_string, no_aromatic_flags=True, hydrogens=True):
+    mol = Chem.MolFromSmiles(smiles_string)
+    if no_aromatic_flags:
+        Chem.Kekulize(mol, clearAromaticFlags=True)
+    if hydrogens:
+        mol = rdmolops.AddHs(mol=mol)
     return mol
 
 def add_Hs(mol):
@@ -155,20 +166,107 @@ def find_carbon_nitrogen_bond(nitrogen_atom):
         carbon = bond.GetEndAtom()
     return carbon, bond
 
-def diamine_to_diimine(mol):
+def naive_diimine_fix(mol):
+
+    '''
+    re-calculates the bond orders simply by turning N-C=C-N into N=C-C=N
+    '''
+
     mol = copy.deepcopy(mol)
-    mol = remove_one_H_from_NH2(mol)
-    mol = remove_one_H_from_NH2(mol)
+    Chem.Kekulize(mol, clearAromaticFlags=True)
     nitrogens = find_naked_atom_idx(mol)
     assert len(nitrogens)==2
     nitrogen_atoms = [mol.GetAtomWithIdx(i) for i in nitrogens]
     carbon1, bond1 = find_carbon_nitrogen_bond(nitrogen_atoms[0])
     carbon2, bond2 = find_carbon_nitrogen_bond(nitrogen_atoms[1])
     CC_bond = mol.GetBondBetweenAtoms(carbon1.GetIdx(), carbon2.GetIdx())
+    assert CC_bond.GetBondTypeAsDouble()==2
     CC_bond.SetBondType(Chem.rdchem.BondType.SINGLE)
     bond1.SetBondType(Chem.rdchem.BondType.DOUBLE)
     bond2.SetBondType(Chem.rdchem.BondType.DOUBLE)
     return mol
+
+def rm_radicals(smi):
+
+    '''
+    Attempts to remove double radicals generating resonance Lewis structures via kekulization. 
+    Building a resonance supplier seems to be the only graceful way.
+    '''
+
+    # initial Lewis struture
+    mol = Chem.MolFromSmiles(smi)
+    Chem.Kekulize(mol, clearAromaticFlags=True) # aromatic bonds not allowed
+
+    # resonance structure supplier
+    supplier = Chem.ResonanceMolSupplier(mol, Chem.KEKULE_ALL)
+    for res_mol in supplier:
+        res_smi = Chem.MolToSmiles(res_mol, kekuleSmiles=True)
+        new_mol = Chem.MolFromSmiles(res_smi)
+        if Descriptors.NumRadicalElectrons(new_mol)==0: # breaks the moment a feasible SMILES string is found
+            return res_smi
+        
+    try:
+        return Chem.MolToSmiles(fix_NO2(mol))
+    except:
+        pass
+    print('Ouch! What a tough one.\n' + smi)
+    return smi   
+
+def fix_NO2(mol):
+    '''
+    deals with the special case where two radicals exist, one on the N in NO2
+    the other on a random C atom
+
+    '''
+    mol = copy.deepcopy(mol)
+    radicals = [atom for atom in mol.GetAtoms() if atom.GetNumRadicalElectrons() > 0]
+    C_atom, N_atom = sorted(radicals, key=lambda atom: atom.GetAtomicNum())
+    assert C_atom.GetAtomicNum()==6 and N_atom.GetAtomicNum()==7
+    O_atom = None
+    for atom in N_atom.GetNeighbors():
+        if atom.GetAtomicNum()==8:
+            O_atom = atom
+            break
+    bond = mol.GetBondBetweenAtoms(N_atom.GetIdx(), O_atom.GetIdx())
+    bond.SetBondType(Chem.rdchem.BondType.DOUBLE)
+    N_atom.SetNumRadicalElectrons(0)
+    N_atom.SetFormalCharge(1)
+    O_atom.SetFormalCharge(0)
+    C_atom.SetNumRadicalElectrons(0)
+    C_atom.SetFormalCharge(0)
+    return mol
+
+def primary_diamine_to_diimine(smi: str) -> str:
+
+    '''
+    smi: SMILES of primary diamine
+    di_smi: SMILES of converted diimine
+
+    '''
+
+    mol = Chem.MolFromSmiles(smi)
+    mol = rdmolops.AddHs(mol)
+    Chem.Kekulize(mol, clearAromaticFlags=True)
+
+    # generates conformer, this is absolutely needed to correctly determine connectivity
+    AllChem.EmbedMolecule(mol)
+    AllChem.MMFFOptimizeMolecule(mol)
+
+    # removes two hydrogens
+    mol = remove_one_H_from_NH2(mol)
+    mol = remove_one_H_from_NH2(mol)
+
+    try:
+        mol = naive_diimine_fix(mol)
+    except:
+        rdDetermineBonds.DetermineBonds(mol, charge=0)
+
+    # generates SMILES for diimine
+    di_smi = Chem.MolToSmiles(mol)
+    di_smi = Chem.CanonSmiles(di_smi)
+    if Descriptors.NumRadicalElectrons(mol)>0:
+        return Chem.CanonSmiles(rm_radicals(di_smi))
+    return di_smi
 
 # code for assembling
 
