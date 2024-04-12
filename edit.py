@@ -353,25 +353,9 @@ def find_connected_carbons(atom):
     '''
     finds idx of all carbons connected to atom
     '''
-
-    this_idx = atom.GetIdx()
-    bonds = atom.GetBonds()
-    atomic_num_pairs = [(bond.GetBeginAtom().GetAtomicNum(), bond.GetEndAtom().GetAtomicNum()) for bond in bonds]
-    carbons = []
-    for i, pair in enumerate(atomic_num_pairs):
-        if 6 in pair:
-            bond = bonds[i] 
-            if pair[0] == 6:
-                carbon = bond.GetBeginAtom()
-                j = carbon.GetIdx()
-                if j != this_idx: # atom could also be a carbon
-                    carbons.append(j)
-            if pair[1] == 6:
-                carbon = bond.GetEndAtom()
-                j = carbon.GetIdx()
-                if j != this_idx:
-                    carbons.append(j)
-    return sorted(set(carbons))
+    atoms = atom.GetNeighbors()
+    carbons = [i.GetIdx() for i in atoms if i.GetAtomicNum()==6]
+    return sorted(carbons)
 
 def bfs_find_carbons(mol, starting_idx, depth):
 
