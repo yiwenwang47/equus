@@ -17,6 +17,15 @@ def clean(mol):
 def create_smiles(mol):
     return Chem.CanonSmiles(Chem.MolToSmiles(mol))
 
+def embed(mol):
+    '''
+    generates one conformer
+    very helpful because connectivities are well established this way
+    '''
+    if mol.GetNumConformers()==0:
+        AllChem.EmbedMolecule(mol)
+        AllChem.MMFFOptimizeMolecule(mol)
+
 def read_smiles(smiles_string, no_aromatic_flags=True, hydrogens=True):
     mol = Chem.MolFromSmiles(smiles_string)
     if no_aromatic_flags:
@@ -74,6 +83,11 @@ def find_primary_amine_pos(mol):
     return [i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i))==2]
 
 def find_imine_pos(mol):
+
+    '''
+    Please make sure that mol has explicit Hs!!!!!
+    '''
+    
     nitrogens = find_atom_indices(mol, 7)
     _list = []
     for i in nitrogens:
@@ -134,7 +148,7 @@ def find_naked_atom_idx(mol):
     P: 5 bonds
     '''
 
-    num_of_bonds_dict = {1:[1], 6:[4], 7:[3,4], 8:[2], 16:[2,6], 
+    num_of_bonds_dict = {1:[1], 6:[4], 7:[3], 8:[2], 16:[2,6], 
                         9:[1], 17:[1], 35:[1], 53:[1], 15:[5]}
     list_of_idx = []
     for atom in mol.GetAtoms():
@@ -275,6 +289,7 @@ def primary_diamine_to_diimine(smi: str) -> str:
 # code for assembling
 
 def connect_diamine_with_amine(mol_diamine, mol_amine):
+    embed(mol_diamine)
     mol_diamine_naked = remove_one_H_from_NH2(mol=mol_diamine)
     mol_amine_naked = remove_NH2(mol=mol_amine)
     idx1, idx2 = find_naked_atom_idx(mol_diamine_naked)[0], find_naked_atom_idx(mol_amine_naked)[0]
@@ -284,6 +299,7 @@ def connect_diamine_with_amine(mol_diamine, mol_amine):
     return final_mol
 
 def connect_diimine_with_amine(mol_diimine, mol_amine):
+    embed(mol_diimine)
     mol_diimine_naked = remove_one_H_from_NH(mol=mol_diimine)
     mol_amine_naked = remove_NH2(mol=mol_amine)
     idx1, idx2 = find_naked_atom_idx(mol_diimine_naked)[0], find_naked_atom_idx(mol_amine_naked)[0]
@@ -353,6 +369,7 @@ def find_connected_carbons(atom):
     '''
     finds idx of all carbons connected to atom
     '''
+
     atoms = atom.GetNeighbors()
     carbons = [i.GetIdx() for i in atoms if i.GetAtomicNum()==6]
     return sorted(carbons)
