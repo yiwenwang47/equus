@@ -1,8 +1,7 @@
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdmolops
-from rdkit import DataStructs
 import networkx as nx
-from networkx.algorithms import isomorphism as iso
+from networkx.algorithms import isomorphism
 
 def pure_mol_to_nx(mol):
     G = nx.Graph()
@@ -31,7 +30,7 @@ def find_unique_mols(list_of_mols):
     for i, graph in enumerate(list_of_graphs):
         keep = True
         for other_graph in unique_graphs:
-            if iso.GraphMatcher(graph, other_graph, node_match=node_match).is_isomorphic():
+            if isomorphism.GraphMatcher(graph, other_graph, node_match=node_match).is_isomorphic():
                 keep = False
                 break
         if keep:
