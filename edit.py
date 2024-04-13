@@ -52,6 +52,9 @@ def num_of_Hs(atom):
         return explicit
 
 def find_carbons(mol, num_of_amines=1):
+    '''
+    finds idx of all carbons as candidates for substitution
+    '''
     skip = 1
     carbons = find_atom_indices(mol, 6)
     carbons = [carbon for carbon in carbons if num_of_Hs(mol.GetAtomWithIdx(carbon))>0]
@@ -123,7 +126,7 @@ def remove_one_H_from_NH2(mol):
 def remove_one_H_from_NH(mol):
 
     '''
-    only deals with imines
+    only deals with imines with no subs
     '''
 
     nitrogen = find_imine_pos(mol)[0]
@@ -203,7 +206,7 @@ def naive_diimine_fix(mol):
 def rm_radicals(smi):
 
     '''
-    Attempts to remove double radicals generating resonance Lewis structures via kekulization. 
+    Attempts to remove double radicals by generating resonance Lewis structures via kekulization. 
     Building a resonance supplier seems to be the only graceful way.
     '''
 
@@ -289,6 +292,10 @@ def primary_diamine_to_diimine(smi: str) -> str:
 # code for assembling
 
 def connect_diamine_with_amine(mol_diamine, mol_amine):
+    '''
+    mol_diamine: a primary diamine
+    mol_amine: a primary amine
+    '''
     embed(mol_diamine)
     mol_diamine_naked = remove_one_H_from_NH2(mol=mol_diamine)
     mol_amine_naked = remove_NH2(mol=mol_amine)
@@ -299,6 +306,10 @@ def connect_diamine_with_amine(mol_diamine, mol_amine):
     return final_mol
 
 def connect_diimine_with_amine(mol_diimine, mol_amine):
+    '''
+    mol_diimine: diimine with no subs
+    mol_amine: a primary amine
+    '''
     embed(mol_diimine)
     mol_diimine_naked = remove_one_H_from_NH(mol=mol_diimine)
     mol_amine_naked = remove_NH2(mol=mol_amine)
@@ -342,6 +353,9 @@ def connect_amine_and_deuterium(mol1, idx1, mol2):
     return clean(final_mol)
             
 def find_unique_carbons(mol, num_of_amines):
+    '''
+    finds unique carbons for substitution
+    '''
     carbons = find_carbons(mol=mol, num_of_amines=num_of_amines)
     list_of_mols = [connect_amine_and_deuterium(mol, i, test_mol) for i in carbons]
     idx = find_unique_mols(list_of_mols)
@@ -394,5 +408,9 @@ def bfs_find_carbons(mol, starting_idx, depth):
     return list_of_carbons_per_level
 
 def filter_carbons(mol, list_of_carbons):
+    '''
+    finds carbon candidates for substitution
+    list_of_carbons: atom indices
+    '''
     carbons = [carbon for carbon in list_of_carbons if num_of_Hs(mol.GetAtomWithIdx(carbon))>0]
     return carbons
