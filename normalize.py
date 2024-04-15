@@ -1,6 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import rdmolops
-from .edit import clean, find_atom_indices, find_naked_atom_idx
+from .edit import clean, find_atom_indices, find_naked_atom_idx, find_primary_amine_pos
 from .edit import num_of_Hs, remove_atom, remove_unconnected_Hs
 
 '''
@@ -19,6 +19,11 @@ def add_one_H(mol_naked):
     mol = clean(combo.GetMol())
     return mol
 
+def find_OH(mol):
+    oxygens = find_atom_indices(mol, atomic_number=8)
+    oxygens = [i for i in oxygens if num_of_Hs(mol.GetAtomWithIdx(i))==1]
+    return oxygens
+
 def remove_OH(mol):
 
     '''
@@ -26,14 +31,18 @@ def remove_OH(mol):
     replaces all -OH groups with Hydrogens
     '''
 
-    oxygens = find_atom_indices(mol, atomic_number=8)
-    OH = [i for i in oxygens if num_of_Hs(mol.GetAtomWithIdx(i))==1]
-    for O in OH:
-        mol = remove_atom(mol, O)
+    oxygens = find_OH(mol)
+    while len(oxygens)>0:
+        mol = remove_atom(mol, oxygens[0])
         mol = remove_unconnected_Hs(mol)
         mol = add_one_H(mol)
-
+        oxygens = find_OH(mol)
     return mol
+
+def find_SH(mol):
+    sulfurs = find_atom_indices(mol, atomic_number=16)
+    sulfurs = [i for i in sulfurs if num_of_Hs(mol.GetAtomWithIdx(i))==1]
+    return sulfurs
 
 def remove_SH(mol):
 
@@ -42,13 +51,12 @@ def remove_SH(mol):
     replaces all -SH groups with Hydrogens
     '''
 
-    sulfurs = find_atom_indices(mol, atomic_number=16)
-    SH = [i for i in sulfurs if num_of_Hs(mol.GetAtomWithIdx(i))==1]
-    for S in SH:
-        mol = remove_atom(mol, S)
+    sulfurs = find_SH(mol)
+    while len(sulfurs)>0:
+        mol = remove_atom(mol, idx=sulfurs[0])
         mol = remove_unconnected_Hs(mol)
         mol = add_one_H(mol)
-
+        sulfurs = find_SH(mol)
     return mol
 
 def remove_unwanted_NH2(mol, N_idx):
@@ -62,4 +70,25 @@ def remove_unwanted_NH2(mol, N_idx):
     mol = remove_unconnected_Hs(mol)
     mol = add_one_H(mol)
 
+    return mol
+
+def remove_all_NH2(mol):
+
+    '''
+    mol: molecule with explicit Hs
+    all -NH2 groups will be removed
+    '''
+
+    nitrogens = find_primary_amine_pos(mol)
+    
+    while len(nitrogens)>0:
+        mol = remove_unwanted_NH2(mol, nitrogens[0])
+        nitrogens = find_primary_amine_pos(mol)
+    
+    return mol
+
+def remove_all(mol):
+    mol = remove_all_NH2(mol)
+    mol = remove_OH(mol)
+    mol = remove_SH(mol)
     return mol

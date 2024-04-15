@@ -361,23 +361,6 @@ def find_unique_carbons(mol, num_of_amines):
     idx = find_unique_mols(list_of_mols)
     return [carbons[i] for i in idx]
 
-def all_smiles_amine_group(base_mol, group):
-
-    '''
-    base_mol: primary amine
-    group: deuterium-substituted small molecule
-    Finds unique carbons on the backbone, i.e., base_mol.
-    Creates new molecules by connecting the group to different carbons on the backbone.
-    Returns a list of new smiles.
-    '''
-
-    carbons = find_unique_carbons(base_mol, 1)
-    new_molecules = [connect_amine_and_deuterium(base_mol, carbon, group) for carbon in carbons]
-    new_smiles = [Chem.CanonSmiles(Chem.MolToSmiles(mol)) for mol in new_molecules]
-    idx = find_unique_smiles(new_smiles)
-    new_smiles = [new_smiles[i] for i in idx]
-    return new_smiles
-
 def find_connected_carbons(atom):
 
     '''

@@ -25,7 +25,7 @@ node_match = lambda node1, node2: node1['atom']==node2['atom']
 
 def find_unique_mols(list_of_mols):
     idx = []
-    list_of_graphs = [mol_to_nx(mol) for mol in list_of_mols]
+    list_of_graphs = [pure_mol_to_nx(mol) for mol in list_of_mols]
     unique_graphs = []
     for i, graph in enumerate(list_of_graphs):
         keep = True
