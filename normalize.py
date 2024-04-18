@@ -2,6 +2,10 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 from .edit import clean, find_atom_indices, find_naked_atom_idx, find_primary_amine_pos
 from .edit import num_of_Hs, remove_atom, remove_unconnected_Hs
+from .edit import pure_mol_to_nx
+import networkx as nx
+from .iso import node_match
+from networkx.algorithms import isomorphism
 
 '''
 Note: all molecules should have explicit Hydrogens!
@@ -92,3 +96,38 @@ def remove_all(mol):
     mol = remove_OH(mol)
     mol = remove_SH(mol)
     return mol
+
+# graph of N-C-C-N
+bridge_atoms = [7, 6, 6, 7]
+bridge_graph = nx.Graph()
+for i, atom in enumerate(bridge_atoms):
+    bridge_graph.add_node(i, atom=atom)
+    if i>0:
+        bridge_graph.add_edge(i-1, i)
+
+def find_bridges(mol):
+
+    '''
+    Finds all N-C-C-N bridges. Hydrogens are not considered.
+    '''
+
+    # mappings
+    graph = pure_mol_to_nx(mol)
+    matcher = isomorphism.GraphMatcher(graph, bridge_graph, node_match)
+    assert matcher.subgraph_is_isomorphic()
+    mappings = [i for i in matcher.subgraph_isomorphisms_iter()]
+
+    # sorts each mapping in the order of N-C-C-N
+    helper = lambda mapping: [i[0] for i in sorted(mapping.items(), key=lambda x: x[1])]
+    bridges_found = [helper(mapping) for mapping in mappings]
+
+    # finds unique mappings
+    unique_bridges = []
+    sorted_bridges = []
+    for i in bridges_found:
+        sorted_bridge = sorted(i)
+        if sorted_bridge not in sorted_bridges:
+            unique_bridges.append(i)
+            sorted_bridges.append(sorted_bridge)
+
+    return unique_bridges
