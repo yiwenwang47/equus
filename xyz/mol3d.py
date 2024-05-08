@@ -1,5 +1,6 @@
-# Copied from https://github.com/hjkgrp/molSimplify/blob/master/molSimplify/Classes/globalvars.py
+from __future__ import annotations
 
+# Copied from https://github.com/hjkgrp/molSimplify/blob/master/molSimplify/Classes/globalvars.py
 # Dictionary containing atomic mass, atomic number, covalent radius, number of valence electrons
 # Data from http://www.webelements.com/ (last accessed May 13th 2015)
 elementdict = {
@@ -427,8 +428,6 @@ def ismetal(atom: str) -> bool:
 
 covalent_radius = lambda atom: elementdict[atom][2]
 
-from __future__ import annotations
-
 import copy
 from collections import defaultdict
 from dataclasses import dataclass
@@ -436,7 +435,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.spatial import distance_matrix
 
-from equus.xyz.xyz_parser import lines_to_atoms_coords, parse_xyz
+from equus.xyz.xyz_parser import parse_xyz
 
 
 @dataclass
@@ -453,13 +452,7 @@ class simple_mol:
     @staticmethod
     def from_xyzfile(xyzname) -> simple_mol:
         atoms, coords = parse_xyz(xyzname)
-        mol = simple_mol(atoms, coords)
-        mol.natoms = len(atoms)
-        mol.parse_all()
-        return mol
-
-    def __repr__(self):
-        return ", ".join(self.atoms)
+        return simple_mol(atoms, coords)
 
     def copy(self):
         return copy.deepcopy(self)
@@ -478,7 +471,8 @@ class simple_mol:
         if fake_depth != 0:
             self.distance_cheat(fake_depth)
 
-    def parse_all(self):
+    def __post_init__(self):
+        self.natoms = len(self.atoms)
         self.graph = get_graph_full_scope(self)
         self.init_distances()
         self.get_all_distances()
@@ -552,7 +546,7 @@ def get_graph_full_scope(mol: simple_mol) -> np.ndarray:
     graph = np.zeros((n, n))
     cutoffs = get_cutoffs(mol.atoms)
 
-    mol.matrix = distance_matrix(mol.coords_all, mol.coords_all)
+    mol.matrix = distance_matrix(mol.coords, mol.coords)
 
     for i in range(n):
         for j in range(i + 1, n):
