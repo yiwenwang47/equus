@@ -22,18 +22,18 @@ class Molecules(object):
 
         self.names = names
         self.smiles = smiles
-        self.mols = [read_smiles(smi, no_aromatic_flags=False) for smi in smiles]
+        self.mols = [read_smiles(smi, no_aromatic_flags=False, hydrogens=True) for smi in smiles]
         self.mol_form = [form(mol) for mol in self.mols]
         self.fps = [fpgen.GetFingerprint(mol) for mol in self.mols]
 
-    def __getitem__(self, i):
+    def __getitem__(self, i) -> str:
         return self.smiles[i]
 
     def add(self, name, smi):
 
         self.names.append(name)
         self.smiles.append(smi)
-        mol = read_smiles(smi, no_aromatic_flags=False)
+        mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
         self.mols.append(mol)
         self.mol_form.append(form(mol))
         self.fps.append(fpgen.GetFingerprint(mol))
@@ -48,12 +48,14 @@ class Molecules(object):
 
         # naive smiles matching
         smi = Chem.CanonSmiles(smi)
-        if smi in self.smiles:
+        try:
             i = self.smiles.index(smi)
             return True, self.name[i]
+        except:
+            pass
         
         # find candidates by molecular formula matching
-        mol = read_smiles(smi, no_aromatic_flags=False)
+        mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
         formula = form(mol)
         if formula not in self.mol_form:
             return False, ''

@@ -85,6 +85,10 @@ def find_primary_amine_pos(mol):
     nitrogens = find_atom_indices(mol, 7)
     return [i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i))==2]
 
+def find_secondary_amine_pos(mol):
+    nitrogens = find_atom_indices(mol, 7)
+    return [i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i))==1]
+
 def find_imine_pos(mol):
 
     '''
