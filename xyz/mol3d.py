@@ -450,26 +450,9 @@ class simple_mol:
     coords: np.ndarray
 
     @staticmethod
-    def from_xyzfile(xyzname) -> simple_mol:
+    def from_xyzfile(xyzname: str) -> simple_mol:
         atoms, coords = parse_xyz(xyzname)
         return simple_mol(atoms, coords)
-
-    def copy(self):
-        return copy.deepcopy(self)
-
-    def init_distances(self):
-        self.distances = self.graph.copy()
-
-    def get_all_distances(self, depth=100, fake_depth=0):
-        """
-        Only calculates shortest-path distances up to depth.
-        New option: set all the longer distances as fake_depth.
-        """
-
-        for ind in range(self.natoms):
-            bfs_distances(self, ind, depth)
-        if fake_depth != 0:
-            self.distance_cheat(fake_depth)
 
     def __post_init__(self):
         self.natoms = len(self.atoms)
@@ -477,11 +460,25 @@ class simple_mol:
         self.init_distances()
         self.get_all_distances()
 
-    def get_bonded_atoms(self, atom_index: int):
+    def copy(self) -> simple_mol:
+        return copy.deepcopy(self)
+
+    def init_distances(self):
+        self.distances = self.graph.copy()
+
+    def get_all_distances(self, depth: int = 100):
+        """
+        Only calculates shortest-path distances (topological) up to depth.
+        """
+
+        for ind in range(self.natoms):
+            bfs_distances(self, ind, depth)
+
+    def get_bonded_atoms(self, atom_index: int) -> np.ndarray:
         con = self.graph[atom_index]
         return np.where(con == 1)[0]
 
-    def get_bonded_atoms_multiple(self, atom_ind: list) -> list:
+    def get_bonded_atoms_multiple(self, atom_ind: list[int]) -> list[int]:
         indices = set(atom_ind)
         bonded = set()
         for i in indices:
@@ -520,7 +517,7 @@ def get_bond_cutoff(a1: str, a2: str) -> float:
     return cutoff
 
 
-def get_cutoffs(atoms: list) -> defaultdict:
+def get_cutoffs(atoms: list) -> defaultdict[dict]:
     """
     Calculate bond length cutoffs for all possible atom pairs.
     """
