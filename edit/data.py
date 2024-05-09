@@ -2,8 +2,8 @@ from networkx.algorithms import isomorphism
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
-from .edit import read_smiles
-from .iso import node_match, pure_mol_to_nx
+from equus.edit.iso import node_match, pure_mol_to_nx
+from equus.edit.utils import read_smiles
 
 form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
 n_bits = 2048

@@ -3,7 +3,8 @@ from networkx.algorithms import isomorphism
 from rdkit import Chem
 from rdkit.Chem import rdmolops
 
-from .edit import (
+from equus.edit.iso import node_match
+from equus.edit.utils import (
     clean,
     find_atom_indices,
     find_naked_atom_idx,
@@ -13,7 +14,6 @@ from .edit import (
     remove_atom,
     remove_unconnected_Hs,
 )
-from .iso import node_match
 
 """
 Note: all molecules should have explicit Hydrogens!

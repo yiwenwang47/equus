@@ -1,7 +1,7 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdmolops
+from rdkit.Chem import rdmolops
 
 
 def pure_mol_to_nx(mol):
