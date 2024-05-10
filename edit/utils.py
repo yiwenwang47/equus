@@ -1,4 +1,5 @@
 import copy
+from collections.abc import Iterator
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdDetermineBonds, rdmolops
@@ -53,11 +54,19 @@ def add_Hs(mol: Mol) -> Mol:
         return mol
 
 
-def find_atom_indices(mol: Mol, atomic_number: int) -> list[int]:
-    idx_list = [
-        atom.GetIdx() for atom in mol.GetAtoms() if atom.GetAtomicNum() == atomic_number
-    ]
-    return idx_list
+def find_atom_indices(
+    mol: Mol, atomic_number: int, num_neighbors: int = -1
+) -> Iterator[int]:
+    """
+    returns a generator
+    """
+    generator = (
+        atom.GetIdx()
+        for atom in mol.GetAtoms()
+        if atom.GetAtomicNum() == atomic_number
+        and (num_neighbors == -1 or num_neighbors == len(atom.GetNeighbors()))
+    )
+    return generator
 
 
 def num_of_Hs(atom: Atom) -> int:
@@ -81,7 +90,7 @@ def find_carbons(mol: Mol, num_of_amines: int = 1) -> list[int]:
     ]
     if len(carbons) == 1:
         skip = 0
-    primary_amine_nitrogens = find_primary_amine_pos(mol)
+    primary_amine_nitrogens = [i for i in find_primary_amine_pos(mol)]
     assert len(primary_amine_nitrogens) == num_of_amines
     starting_points = primary_amine_nitrogens
     to_skip = []
@@ -98,14 +107,14 @@ def find_carbons(mol: Mol, num_of_amines: int = 1) -> list[int]:
     return list(set(carbons) - set(to_skip))
 
 
-def find_primary_amine_pos(mol: Mol) -> list[int]:
+def find_primary_amine_pos(mol: Mol) -> Iterator[int]:
     nitrogens = find_atom_indices(mol, 7)
-    return [i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i)) == 2]
+    return (i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i)) == 2)
 
 
-def find_secondary_amine_pos(mol: Mol) -> list[int]:
+def find_secondary_amine_pos(mol: Mol) -> Iterator[int]:
     nitrogens = find_atom_indices(mol, 7)
-    return [i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i)) == 1]
+    return (i for i in nitrogens if num_of_Hs(mol.GetAtomWithIdx(i)) == 1)
 
 
 def find_imine_pos(mol: Mol) -> list[int]:
@@ -130,35 +139,32 @@ def remove_atom(mol: Mol, idx: int) -> Mol:
 
 
 def remove_unconnected_Hs(mol: Mol) -> Mol:
-    Hs = [
-        H
-        for H in find_atom_indices(mol, 1)
-        if len(mol.GetAtomWithIdx(H).GetNeighbors()) == 0
-    ]
-    while len(Hs) > 0:
-        mol = remove_atom(mol, Hs[0])
-        Hs = [
-            H
-            for H in find_atom_indices(mol, 1)
-            if len(mol.GetAtomWithIdx(H).GetNeighbors()) == 0
-        ]
+    Hs = find_atom_indices(mol, atomic_number=1, num_neighbors=0)
+    while True:
+        try:
+            mol = remove_atom(mol, next(Hs))
+            Hs = find_atom_indices(mol, atomic_number=1, num_neighbors=0)
+        except:
+            break
     return mol
 
 
 def remove_NH2(mol: Mol) -> Mol:
-    nitrogen = find_primary_amine_pos(mol)[0]
+    nitrogen = next(find_primary_amine_pos(mol))
     mol_naked = remove_atom(mol, nitrogen)
     mol_naked = remove_unconnected_Hs(mol_naked)
     return mol_naked
 
 
 def remove_one_H_from_NH2(mol: Mol) -> Mol:
-    nitrogen = find_primary_amine_pos(mol)[0]
-    H = [
-        H.GetIdx()
-        for H in mol.GetAtomWithIdx(nitrogen).GetNeighbors()
-        if H.GetAtomicNum() == 1
-    ][0]
+    nitrogen = next(find_primary_amine_pos(mol))
+    H = next(
+        (
+            H.GetIdx()
+            for H in mol.GetAtomWithIdx(nitrogen).GetNeighbors()
+            if H.GetAtomicNum() == 1
+        )
+    )
     mol_naked = remove_atom(mol, H)
     return mol_naked
 
@@ -170,21 +176,23 @@ def remove_one_H_from_NH(mol: Mol) -> Mol:
     """
 
     nitrogen = find_imine_pos(mol)[0]
-    H = [
-        H.GetIdx()
-        for H in mol.GetAtomWithIdx(nitrogen).GetNeighbors()
-        if H.GetAtomicNum() == 1
-    ][0]
+    H = next(
+        (
+            H.GetIdx()
+            for H in mol.GetAtomWithIdx(nitrogen).GetNeighbors()
+            if H.GetAtomicNum() == 1
+        )
+    )
     mol_naked = remove_atom(mol, H)
     return mol_naked
 
 
 def get_num_of_bonds(atom: Atom) -> int:
     bonds = atom.GetBonds()
-    return sum([bond.GetBondTypeAsDouble() for bond in bonds])
+    return int(sum(bond.GetBondTypeAsDouble() for bond in bonds))
 
 
-def find_naked_atom_idx(mol: Mol) -> list[int]:
+def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
 
     """
     Only deals with naive cases.
@@ -209,7 +217,6 @@ def find_naked_atom_idx(mol: Mol) -> list[int]:
         53: [1],
         15: [5],
     }
-    list_of_idx = []
     for atom in mol.GetAtoms():
         naked = False
         num = atom.GetAtomicNum()
@@ -221,8 +228,7 @@ def find_naked_atom_idx(mol: Mol) -> list[int]:
         if num in [8, 16] and val == 3:  # this deals with furans and thiophenes
             naked = False
         if naked:
-            list_of_idx.append(atom.GetIdx())
-    return list_of_idx
+            yield atom.GetIdx()
 
 
 # diamine -> diimine
@@ -250,7 +256,7 @@ def naive_diimine_fix(mol: Mol) -> Mol:
 
     mol = copy.deepcopy(mol)
     Chem.Kekulize(mol, clearAromaticFlags=True)
-    nitrogens = find_naked_atom_idx(mol)
+    nitrogens = [i for i in find_naked_atom_idx(mol)]
     assert len(nitrogens) == 2
     nitrogen_atoms = [mol.GetAtomWithIdx(i) for i in nitrogens]
     carbon1, bond1 = find_carbon_nitrogen_bond(nitrogen_atoms[0])
@@ -337,8 +343,7 @@ def primary_diamine_to_diimine(smi: str) -> str:
     Chem.Kekulize(mol, clearAromaticFlags=True)
 
     # generates conformer, this is absolutely needed to correctly determine connectivity
-    AllChem.EmbedMolecule(mol)
-    AllChem.MMFFOptimizeMolecule(mol)
+    embed(mol)
 
     # removes two hydrogens
     mol = remove_one_H_from_NH2(mol)
@@ -350,8 +355,7 @@ def primary_diamine_to_diimine(smi: str) -> str:
         rdDetermineBonds.DetermineBonds(mol, charge=0)
 
     # generates SMILES for diimine
-    di_smi = Chem.MolToSmiles(mol)
-    di_smi = Chem.CanonSmiles(di_smi)
+    di_smi = to_smiles(mol)
     if Descriptors.NumRadicalElectrons(mol) > 0:
         return Chem.CanonSmiles(rm_radicals(di_smi))
     return di_smi
@@ -368,8 +372,8 @@ def connect_two_fragments(naked_1: Mol, naked_2: Mol) -> Mol:
     """
 
     idx1, idx2 = (
-        find_naked_atom_idx(naked_1)[0],
-        find_naked_atom_idx(naked_2)[0],
+        next(find_naked_atom_idx(naked_1)),
+        next(find_naked_atom_idx(naked_2)),
     )
     combo = Chem.EditableMol(Chem.CombineMols(naked_1, naked_2))
     combo.AddBond(idx1, idx2 + naked_1.GetNumAtoms(), order=Chem.rdchem.BondType.SINGLE)
