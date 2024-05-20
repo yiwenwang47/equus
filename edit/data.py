@@ -26,9 +26,13 @@ class Molecules(object):
         ]
         self.mol_form = [form(mol) for mol in self.mols]
         self.fps = [fpgen.GetFingerprint(mol) for mol in self.mols]
+        self.n = len(self.smiles)
 
     def __getitem__(self, i) -> str:
         return self.smiles[i]
+
+    def __len__(self) -> int:
+        return self.n
 
     def add(self, name, smi):
 
@@ -38,6 +42,7 @@ class Molecules(object):
         self.mols.append(mol)
         self.mol_form.append(form(mol))
         self.fps.append(fpgen.GetFingerprint(mol))
+        self.n += 1
 
     def search(self, smi) -> list[bool, str]:
         """

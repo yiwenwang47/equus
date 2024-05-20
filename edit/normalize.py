@@ -45,11 +45,15 @@ def remove_OH(mol):
     replaces all -OH groups with Hydrogens
     """
     oxygens = find_OH(mol)
-    while len(oxygens) > 0:
-        mol = remove_atom(mol, oxygens[0])
-        mol = remove_unconnected_Hs(mol)
-        mol = add_one_H(mol)
-        oxygens = find_OH(mol)
+    while True:
+        try:
+            O = next(oxygens)
+            mol = remove_atom(mol, O)
+            mol = remove_unconnected_Hs(mol)
+            mol = add_one_H(mol)
+            oxygens = find_OH(mol)
+        except:
+            break
     return mol
 
 
@@ -65,11 +69,15 @@ def remove_SH(mol):
     replaces all -SH groups with Hydrogens
     """
     sulfurs = find_SH(mol)
-    while len(sulfurs) > 0:
-        mol = remove_atom(mol, idx=sulfurs[0])
-        mol = remove_unconnected_Hs(mol)
-        mol = add_one_H(mol)
-        sulfurs = find_SH(mol)
+    while True:
+        try:
+            S = next(sulfurs)
+            mol = remove_atom(mol, idx=sulfurs[0])
+            mol = remove_unconnected_Hs(mol)
+            mol = add_one_H(mol)
+            sulfurs = find_SH(mol)
+        except:
+            break
     return mol
 
 
@@ -92,9 +100,13 @@ def remove_all_NH2(mol):
     """
     nitrogens = find_primary_amine_pos(mol)
 
-    while len(nitrogens) > 0:
-        mol = remove_unwanted_NH2(mol, nitrogens[0])
-        nitrogens = find_primary_amine_pos(mol)
+    while True:
+        try:
+            N = next(nitrogens)
+            mol = remove_unwanted_NH2(mol, N)
+            nitrogens = find_primary_amine_pos(mol)
+        except:
+            break
 
     return mol
 
