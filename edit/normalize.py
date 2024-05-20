@@ -44,14 +44,12 @@ def remove_OH(mol):
     mol: molecule with explicit Hs
     replaces all -OH groups with Hydrogens
     """
-    oxygens = find_OH(mol)
     while True:
         try:
-            O = next(oxygens)
+            O = next(find_OH(mol))
             mol = remove_atom(mol, O)
             mol = remove_unconnected_Hs(mol)
             mol = add_one_H(mol)
-            oxygens = find_OH(mol)
         except:
             break
     return mol
@@ -68,14 +66,12 @@ def remove_SH(mol):
     mol: molecule with explicit Hs
     replaces all -SH groups with Hydrogens
     """
-    sulfurs = find_SH(mol)
     while True:
         try:
-            S = next(sulfurs)
-            mol = remove_atom(mol, idx=sulfurs[0])
+            S = next(find_SH(mol))
+            mol = remove_atom(mol, idx=S)
             mol = remove_unconnected_Hs(mol)
             mol = add_one_H(mol)
-            sulfurs = find_SH(mol)
         except:
             break
     return mol
@@ -98,13 +94,11 @@ def remove_all_NH2(mol):
     mol: molecule with explicit Hs
     all -NH2 groups will be removed
     """
-    nitrogens = find_primary_amine_pos(mol)
 
     while True:
         try:
-            N = next(nitrogens)
+            N = next(find_primary_amine_pos(mol))
             mol = remove_unwanted_NH2(mol, N)
-            nitrogens = find_primary_amine_pos(mol)
         except:
             break
 
