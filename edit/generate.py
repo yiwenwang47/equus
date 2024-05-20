@@ -24,6 +24,23 @@ def aliphatic_ring_double_bonds(smi: str) -> list[Bond]:
     return candidates
 
 
+def aromatic_ring_double_bonds(smi: str) -> list[Bond]:
+
+    """
+    Finds all aromatic double bonds in rings.
+    Returns a list od Bond objects.
+    """
+
+    mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
+    candidates = []
+    bonds = mol.GetBonds()
+    for bond in bonds:
+        if bond.GetBondTypeAsDouble() > 1 and bond.IsInRing() and bond.GetIsAromatic():
+            if num_of_Hs(bond.GetBeginAtom()) > 0 and num_of_Hs(bond.GetEndAtom()) > 0:
+                candidates.append(bond)
+    return candidates
+
+
 mol_NH2 = read_smiles("N", hydrogens=True)
 N_idx = next(atom for atom in mol_NH2.GetAtoms() if atom.GetAtomicNum() == 7).GetIdx()
 
