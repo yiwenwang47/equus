@@ -26,7 +26,7 @@ def add_one_H(mol_naked):
     """
     mol_naked: molecule with only one naked atom
     """
-    i = find_naked_atom_idx(mol_naked)[0]
+    i = next(find_naked_atom_idx(mol_naked))
     combo = Chem.EditableMol(Chem.CombineMols(mol_naked, mol_H))
     combo.AddBond(i, mol_naked.GetNumAtoms(), order=Chem.rdchem.BondType.SINGLE)
     mol = clean(combo.GetMol())
@@ -35,7 +35,7 @@ def add_one_H(mol_naked):
 
 def find_OH(mol):
     oxygens = find_atom_indices(mol, atomic_number=8)
-    oxygens = [i for i in oxygens if num_of_Hs(mol.GetAtomWithIdx(i)) == 1]
+    oxygens = (i for i in oxygens if num_of_Hs(mol.GetAtomWithIdx(i)) == 1)
     return oxygens
 
 
@@ -57,7 +57,7 @@ def remove_OH(mol):
 
 def find_SH(mol):
     sulfurs = find_atom_indices(mol, atomic_number=16)
-    sulfurs = [i for i in sulfurs if num_of_Hs(mol.GetAtomWithIdx(i)) == 1]
+    sulfurs = (i for i in sulfurs if num_of_Hs(mol.GetAtomWithIdx(i)) == 1)
     return sulfurs
 
 
