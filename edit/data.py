@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import pandas as pd
 from networkx.algorithms import isomorphism
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
@@ -11,31 +16,35 @@ radius = 5
 fpgen = AllChem.GetMorganGenerator(radius=radius, fpSize=n_bits)
 
 
-class Molecules(object):
+@dataclass
+class Molecules:
+
     """
     Class for keeping track of molecules.
     Has a search method.
     """
 
-    def __init__(self, names, smiles):
+    names: list[str]
+    smiles: list[str]
 
-        self.names = names
-        self.smiles = smiles
+    def __post_init__(self):
         self.mols = [
-            read_smiles(smi, no_aromatic_flags=False, hydrogens=True) for smi in smiles
+            read_smiles(smiles_string=smi, no_aromatic_flags=False, hydrogens=True)
+            for smi in self.smiles
         ]
         self.mol_form = [form(mol) for mol in self.mols]
         self.fps = [fpgen.GetFingerprint(mol) for mol in self.mols]
         self.n = len(self.smiles)
 
-    def __getitem__(self, i) -> str:
-        return self.smiles[i]
+    def __getitem__(self, i: int | str) -> tuple[str, str]:
+        if type(i) == str:
+            i = self.names.index(i)
+        return (self.names[i], self.smiles[i])
 
     def __len__(self) -> int:
         return self.n
 
-    def add(self, name, smi):
-
+    def add(self, name: str, smi: str):
         self.names.append(name)
         self.smiles.append(smi)
         mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
@@ -44,7 +53,7 @@ class Molecules(object):
         self.fps.append(fpgen.GetFingerprint(mol))
         self.n += 1
 
-    def search(self, smi) -> list[bool, str]:
+    def search(self, smi: str) -> tuple[bool, str]:
         """
         Returns:
         True, name if molecule is found.
@@ -85,3 +94,10 @@ class Molecules(object):
                 return True, self.names[i]
 
         return False, ""
+
+    @staticmethod
+    def from_csv(filename: str, name_col: int = 0, smiles_col: int = 1) -> Molecules:
+        df = pd.read_csv(filename)
+        names = list(df.values[:, name_col])
+        smiles = list(df.values[:, smiles_col])
+        return Molecules[names, smiles]
