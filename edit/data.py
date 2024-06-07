@@ -96,8 +96,14 @@ class Molecules:
         return False, ""
 
     @staticmethod
-    def from_csv(filename: str, name_col: int = 0, smiles_col: int = 1) -> Molecules:
+    def from_csv(
+        filename: str, name_col_id: int = 0, smiles_col_id: int = 1
+    ) -> Molecules:
         df = pd.read_csv(filename)
-        names = list(df.values[:, name_col])
-        smiles = list(df.values[:, smiles_col])
+        names = list(df.values[:, name_col_id])
+        smiles = list(df.values[:, smiles_col_id])
         return Molecules[names, smiles]
+
+    def to_csv(self, filename: str, name_col: str = "name", smiles_col: str = "SMILES"):
+        df = pd.DataFrame(data={name_col: self.names, smiles_col: self.smiles})
+        return df

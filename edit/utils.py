@@ -200,6 +200,7 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
     C: 4 bonds
     N: 3 bonds
     O: 2 bonds
+    B: 3 bonds
     S: 2 or 6 bonds
     Halides: 1 bond
     P: 5 bonds
@@ -207,6 +208,7 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
 
     num_of_bonds_dict = {
         1: [1],
+        5: [3],
         6: [4],
         7: [3],
         8: [2],
