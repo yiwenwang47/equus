@@ -203,6 +203,7 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
     B: 3 bonds
     S: 2 or 6 bonds
     Halides: 1 bond
+    Si: 4 bonds
     P: 5 bonds
     """
 
@@ -217,6 +218,7 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
         17: [1],
         35: [1],
         53: [1],
+        14: [4],
         15: [5],
     }
     for atom in mol.GetAtoms():

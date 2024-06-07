@@ -102,8 +102,8 @@ class Molecules:
         df = pd.read_csv(filename)
         names = list(df.values[:, name_col_id])
         smiles = list(df.values[:, smiles_col_id])
-        return Molecules[names, smiles]
+        return Molecules(names, smiles)
 
-    def to_csv(self, filename: str, name_col: str = "name", smiles_col: str = "SMILES"):
+    def to_df(self, name_col: str = "name", smiles_col: str = "SMILES"):
         df = pd.DataFrame(data={name_col: self.names, smiles_col: self.smiles})
         return df
