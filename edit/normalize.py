@@ -123,11 +123,22 @@ for i, atom in enumerate(bridge_atoms):
 helper = lambda mapping: [i[0] for i in sorted(mapping.items(), key=lambda x: x[1])]
 
 
+def verify_N_atom(atom):
+
+    """
+    Criterion: at least one single bond
+    """
+
+    counter = len([bond for bond in atom.GetBonds() if bond.GetBondTypeAsDouble() == 1])
+    return counter > 0
+
+
 def find_bridges(mol):
 
     """
     Finds all N-C-C-N bridges.
     Hydrogens are not considered.
+    Aromatic flags are needed.
     """
 
     # mappings
@@ -143,11 +154,12 @@ def find_bridges(mol):
     unique_bridges = []
     sorted_bridges = []
     for i in bridges_found:
-        sorted_bridge = sorted(i)
-        if sorted_bridge not in sorted_bridges:
-            unique_bridges.append(i)
-            sorted_bridges.append(sorted_bridge)
-
+        N1, N2 = mol.GetAtomWithIdx(i[0]), mol.GetAtomWithIdx(i[-1])
+        if verify_N_atom(N1) and verify_N_atom(N2):
+            sorted_bridge = sorted(i)
+            if sorted_bridge not in sorted_bridges:
+                unique_bridges.append(i)
+                sorted_bridges.append(sorted_bridge)
     return unique_bridges
 
 
