@@ -1,7 +1,6 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 from rdkit import Chem
-from rdkit.Chem import rdmolops
 
 from equus.edit.iso import node_match
 from equus.edit.utils import (
@@ -11,6 +10,7 @@ from equus.edit.utils import (
     find_primary_amine_pos,
     num_of_Hs,
     pure_mol_to_nx,
+    read_smiles,
     remove_atom,
     remove_unconnected_Hs,
 )
@@ -126,7 +126,7 @@ helper = lambda mapping: [i[0] for i in sorted(mapping.items(), key=lambda x: x[
 def verify_N_atom(atom):
 
     """
-    Criterion: at least one single bond
+    Criterion: at least one single bond. For this purpose, aromatic flags are needed.
     """
 
     counter = len([bond for bond in atom.GetBonds() if bond.GetBondTypeAsDouble() == 1])
@@ -138,8 +138,10 @@ def find_bridges(mol):
     """
     Finds all N-C-C-N bridges.
     Hydrogens are not considered.
-    Aromatic flags are needed.
     """
+
+    smi = Chem.MolToSmiles(mol)
+    mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=False)
 
     # mappings
     graph = pure_mol_to_nx(mol)
@@ -172,10 +174,10 @@ for i in range(1, 4):
     acyl_graph.add_edge(i, i + 1)
 
 
-def check_if_acyl(mol):
+def is_acyl(mol):
 
     """
-    Checks if mol has an acyl group right next to -NH2.
+    Checks whether mol has an acyl group right next to -NH2.
     mol must have explicit hydrogens.
     """
 
@@ -202,10 +204,10 @@ for i, atom in enumerate(urea_atoms):
         urea_graph.add_edge(2, i)
 
 
-def check_if_urea(mol):
+def is_urea(mol):
 
     """
-    Checks if mol has a urea substructure.
+    Checks whether mol has a urea substructure.
     mol must have explicit hydrogens.
     """
 
