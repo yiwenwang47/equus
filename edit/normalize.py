@@ -1,6 +1,10 @@
+from collections.abc import Iterator
+
 import networkx as nx
 from networkx.algorithms import isomorphism
 from rdkit import Chem
+from rdkit.Chem import rdmolops
+from rdkit.Chem.rdchem import Atom, Bond, Mol
 
 from equus.edit.iso import node_match
 from equus.edit.utils import (
@@ -22,7 +26,7 @@ Note: all molecules should have explicit Hydrogens!
 mol_H = Chem.MolFromSmiles("[H]", sanitize=False)
 
 
-def add_one_H(mol_naked):
+def add_one_H(mol_naked: Mol) -> Mol:
     """
     mol_naked: molecule with only one naked atom
     """
@@ -33,13 +37,13 @@ def add_one_H(mol_naked):
     return mol
 
 
-def find_OH(mol):
+def find_OH(mol: Mol) -> Iterator[int]:
     oxygens = find_atom_indices(mol, atomic_number=8)
     oxygens = (i for i in oxygens if num_of_Hs(mol.GetAtomWithIdx(i)) == 1)
     return oxygens
 
 
-def remove_OH(mol):
+def remove_OH(mol: Mol) -> Mol:
     """
     mol: molecule with explicit Hs
     replaces all -OH groups with Hydrogens
@@ -55,13 +59,13 @@ def remove_OH(mol):
     return mol
 
 
-def find_SH(mol):
+def find_SH(mol) -> Iterator[int]:
     sulfurs = find_atom_indices(mol, atomic_number=16)
     sulfurs = (i for i in sulfurs if num_of_Hs(mol.GetAtomWithIdx(i)) == 1)
     return sulfurs
 
 
-def remove_SH(mol):
+def remove_SH(mol: Mol) -> Mol:
     """
     mol: molecule with explicit Hs
     replaces all -SH groups with Hydrogens
@@ -77,7 +81,7 @@ def remove_SH(mol):
     return mol
 
 
-def remove_unwanted_NH2(mol, N_idx):
+def remove_unwanted_NH2(mol: Mol, N_idx: int) -> Mol:
     """
     mol: molecule with explicit Hs
     N_idx: idx of N atom in the -NH2 to be removed
@@ -89,7 +93,7 @@ def remove_unwanted_NH2(mol, N_idx):
     return mol
 
 
-def remove_all_NH2(mol):
+def remove_all_NH2(mol: Mol) -> Mol:
     """
     mol: molecule with explicit Hs
     all -NH2 groups will be removed
@@ -105,7 +109,7 @@ def remove_all_NH2(mol):
     return mol
 
 
-def remove_all(mol):
+def remove_all(mol: Mol) -> Mol:
     mol = remove_all_NH2(mol)
     mol = remove_OH(mol)
     mol = remove_SH(mol)
@@ -123,7 +127,7 @@ for i, atom in enumerate(bridge_atoms):
 helper = lambda mapping: [i[0] for i in sorted(mapping.items(), key=lambda x: x[1])]
 
 
-def verify_N_atom(atom):
+def verify_N_atom(atom: Atom) -> bool:
 
     """
     Criterion: at least one single bond. For this purpose, aromatic flags are needed.
@@ -133,15 +137,12 @@ def verify_N_atom(atom):
     return counter > 0
 
 
-def find_bridges(mol):
+def find_bridges(mol: Mol) -> list:
 
     """
     Finds all N-C-C-N bridges.
     Hydrogens are not considered.
     """
-
-    smi = Chem.MolToSmiles(mol)
-    mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=False)
 
     # mappings
     graph = pure_mol_to_nx(mol)
@@ -165,6 +166,41 @@ def find_bridges(mol):
     return unique_bridges
 
 
+def normalize_primary_diamine(mol: Mol) -> Mol:
+
+    """
+    Keeps the N-C-C-N bridge substructure.
+    Removes all other -NH2 groups.
+    """
+
+    smi = Chem.MolToSmiles(mol)
+    mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
+
+    def helper(mol):
+        bridges = find_bridges(mol)
+        nitrogens = [N for N in find_primary_amine_pos(mol)]
+        true_bridges = []
+        for bridge in bridges:
+            if bridge[0] in nitrogens and bridge[-1] in nitrogens:
+                bond = mol.GetBondBetweenAtoms(bridge[1], bridge[2])
+                if bond.GetBondTypeAsDouble() > 1:
+                    true_bridges.append(bridge)
+        assert len(true_bridges) == 1
+        bridge = true_bridges[0]
+        unwanted = list(set(nitrogens) - set(bridge))
+        return unwanted
+
+    unwanted = helper(mol)
+
+    while len(unwanted) > 0:
+        mol = remove_atom(mol, unwanted[0])
+        mol = remove_unconnected_Hs(mol)
+        unwanted = helper(mol)
+
+    smi = Chem.CanonSmiles(Chem.MolToSmiles(mol=mol))
+    return read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
+
+
 acyl_atoms = [1, 1, 7, 6, 8]
 acyl_graph = nx.Graph()
 for i, atom in enumerate(acyl_atoms):
@@ -174,7 +210,7 @@ for i in range(1, 4):
     acyl_graph.add_edge(i, i + 1)
 
 
-def is_acyl(mol):
+def is_acyl(mol: Mol) -> bool:
 
     """
     Checks whether mol has an acyl group right next to -NH2.
@@ -204,7 +240,7 @@ for i, atom in enumerate(urea_atoms):
         urea_graph.add_edge(2, i)
 
 
-def is_urea(mol):
+def is_urea(mol: Mol) -> bool:
 
     """
     Checks whether mol has a urea substructure.
