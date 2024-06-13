@@ -77,13 +77,15 @@ def num_of_Hs(atom: Atom) -> int:
         return explicit
 
 
-def find_carbons(mol: Mol, num_of_amines: int = 1) -> list[int]:
+def find_carbons(mol: Mol, num_of_amines: int = 1, skip: int = 1) -> list[int]:
 
     """
     Finds idx of all carbons as candidates for substitution.
+
+    num_of_amines: a sanity check
+    skip: how many bonds (starting from the primary Nitrogens) do you want to skip?
     """
 
-    skip = 1
     carbons = find_atom_indices(mol, 6)
     carbons = [
         carbon for carbon in carbons if num_of_Hs(mol.GetAtomWithIdx(carbon)) > 0

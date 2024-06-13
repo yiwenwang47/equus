@@ -28,7 +28,7 @@ mol_H = Chem.MolFromSmiles("[H]", sanitize=False)
 
 def add_one_H(mol_naked: Mol) -> Mol:
     """
-    mol_naked: molecule with only one naked atom
+    mol_naked: molecule with at least one naked atom
     """
     i = next(find_naked_atom_idx(mol_naked))
     combo = Chem.EditableMol(Chem.CombineMols(mol_naked, mol_H))
@@ -133,8 +133,7 @@ def verify_N_atom(atom: Atom) -> bool:
     Criterion: at least one single bond. For this purpose, aromatic flags are needed.
     """
 
-    counter = len([bond for bond in atom.GetBonds() if bond.GetBondTypeAsDouble() == 1])
-    return counter > 0
+    return any(bond.GetBondTypeAsDouble() == 1 for bond in atom.GetBonds())
 
 
 def find_bridges(mol: Mol) -> list:
@@ -193,8 +192,7 @@ def normalize_primary_diamine(mol: Mol) -> Mol:
     unwanted = helper(mol)
 
     while len(unwanted) > 0:
-        mol = remove_atom(mol, unwanted[0])
-        mol = remove_unconnected_Hs(mol)
+        mol = remove_unwanted_NH2(mol, unwanted[0])
         unwanted = helper(mol)
 
     smi = Chem.CanonSmiles(Chem.MolToSmiles(mol=mol))
