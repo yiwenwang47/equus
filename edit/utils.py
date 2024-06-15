@@ -198,6 +198,7 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
 
     """
     Only deals with naive cases.
+    No aromatic flags.
     H: 1 bond
     C: 4 bonds
     N: 3 bonds
@@ -207,7 +208,10 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
     Halides: 1 bond
     Si: 4 bonds
     P: 5 bonds
+    As: 3 or 5 bond
     Sn: 4 bonds
+    Se: 2 or 6 bonds
+    Te: 2 or 6 bonds
     """
 
     num_of_bonds_dict = {
@@ -223,7 +227,10 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
         53: [1],
         14: [4],
         15: [5],
+        33: [3, 5],
+        34: [2, 6],
         50: [4],
+        52: [2, 6],
     }
     for atom in mol.GetAtoms():
         naked = False

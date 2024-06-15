@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 from networkx.algorithms import isomorphism
+from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
@@ -100,10 +101,18 @@ class Molecules:
         filename: str, name_col_id: int = 0, smiles_col_id: int = 1
     ) -> Molecules:
         df = pd.read_csv(filename)
+        return Molecules.from_df(
+            df=df, name_col_id=name_col_id, smiles_col_id=smiles_col_id
+        )
+
+    @staticmethod
+    def from_df(
+        df: DataFrame, name_col_id: int = 0, smiles_col_id: int = 1
+    ) -> Molecules:
         names = list(df.values[:, name_col_id])
         smiles = list(df.values[:, smiles_col_id])
         return Molecules(names, smiles)
 
-    def to_df(self, name_col: str = "name", smiles_col: str = "SMILES"):
+    def to_df(self, name_col: str = "name", smiles_col: str = "SMILES") -> DataFrame:
         df = pd.DataFrame(data={name_col: self.names, smiles_col: self.smiles})
         return df
