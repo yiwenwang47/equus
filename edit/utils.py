@@ -208,7 +208,7 @@ def find_naked_atom_idx(mol: Mol) -> Iterator[int]:
     Halides: 1 bond
     Si: 4 bonds
     P: 5 bonds
-    As: 3 or 5 bond
+    As: 3 or 5 bonds
     Sn: 4 bonds
     Se: 2 or 6 bonds
     Te: 2 or 6 bonds

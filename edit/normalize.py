@@ -12,6 +12,7 @@ from equus.edit.utils import (
     find_atom_indices,
     find_naked_atom_idx,
     find_primary_amine_pos,
+    get_num_of_bonds,
     num_of_Hs,
     pure_mol_to_nx,
     read_smiles,
@@ -61,7 +62,12 @@ def remove_OH(mol: Mol) -> Mol:
 
 def find_SH(mol) -> Iterator[int]:
     sulfurs = find_atom_indices(mol, atomic_number=16)
-    sulfurs = (i for i in sulfurs if num_of_Hs(mol.GetAtomWithIdx(i)) == 1)
+    sulfurs = (
+        i
+        for i in sulfurs
+        if num_of_Hs(mol.GetAtomWithIdx(i)) == 1
+        and get_num_of_bonds(mol.GetAtomWithIdx(i)) == 2
+    )
     return sulfurs
 
 
@@ -182,7 +188,12 @@ def normalize_primary_diamine(mol: Mol) -> Mol:
         for bridge in bridges:
             if bridge[0] in nitrogens and bridge[-1] in nitrogens:
                 bond = mol.GetBondBetweenAtoms(bridge[1], bridge[2])
-                if bond.GetBondTypeAsDouble() > 1:
+                N1, N2 = mol.GetAtomWithIdx(bridge[0]), mol.GetAtomWithIdx(bridge[-1])
+                if (
+                    bond.GetBondTypeAsDouble() > 1
+                    and N1.GetFormalCharge() == 0
+                    and N2.GetFormalCharge() == 0
+                ):
                     true_bridges.append(bridge)
         assert len(true_bridges) == 1
         bridge = true_bridges[0]
