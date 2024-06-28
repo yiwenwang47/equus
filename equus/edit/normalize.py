@@ -24,7 +24,7 @@ from equus.edit.utils import (
 Note: all molecules should have explicit Hydrogens!
 """
 
-mol_H = Chem.MolFromSmiles("[H]", sanitize=False)
+__mol_H = Chem.MolFromSmiles("[H]", sanitize=False)
 
 
 def add_one_H(mol_naked: Mol) -> Mol:
@@ -32,7 +32,7 @@ def add_one_H(mol_naked: Mol) -> Mol:
     mol_naked: molecule with at least one naked atom
     """
     i = next(find_naked_atom_idx(mol_naked))
-    combo = Chem.EditableMol(Chem.CombineMols(mol_naked, mol_H))
+    combo = Chem.EditableMol(Chem.CombineMols(mol_naked, __mol_H))
     combo.AddBond(i, mol_naked.GetNumAtoms(), order=Chem.rdchem.BondType.SINGLE)
     mol = clean(combo.GetMol())
     return mol
@@ -123,14 +123,14 @@ def remove_all(mol: Mol) -> Mol:
 
 
 # graph of N-C-C-N
-bridge_atoms = [7, 6, 6, 7]
-bridge_graph = nx.Graph()
-for i, atom in enumerate(bridge_atoms):
-    bridge_graph.add_node(i, atom=atom)
+__bridge_atoms = [7, 6, 6, 7]
+__bridge_graph = nx.Graph()
+for i, atom in enumerate(__bridge_atoms):
+    __bridge_graph.add_node(i, atom=atom)
     if i > 0:
-        bridge_graph.add_edge(i - 1, i)
+        __bridge_graph.add_edge(i - 1, i)
 
-helper = lambda mapping: [i[0] for i in sorted(mapping.items(), key=lambda x: x[1])]
+__helper = lambda mapping: [i[0] for i in sorted(mapping.items(), key=lambda x: x[1])]
 
 
 def verify_N_atom(atom: Atom) -> bool:
@@ -151,12 +151,12 @@ def find_bridges(mol: Mol) -> list:
 
     # mappings
     graph = pure_mol_to_nx(mol)
-    matcher = isomorphism.GraphMatcher(graph, bridge_graph, node_match)
+    matcher = isomorphism.GraphMatcher(graph, __bridge_graph, node_match)
     assert matcher.subgraph_is_isomorphic()
     mappings = [i for i in matcher.subgraph_isomorphisms_iter()]
 
     # sorts each mapping in the order of N-C-C-N
-    bridges_found = [helper(mapping) for mapping in mappings]
+    bridges_found = [__helper(mapping) for mapping in mappings]
 
     # finds unique mappings
     unique_bridges = []
@@ -181,7 +181,7 @@ def normalize_primary_diamine(mol: Mol) -> Mol:
     smi = Chem.MolToSmiles(mol)
     mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
 
-    def helper(mol):
+    def __helper(mol):
         bridges = find_bridges(mol)
         nitrogens = [N for N in find_primary_amine_pos(mol)]
         true_bridges = []
@@ -200,23 +200,23 @@ def normalize_primary_diamine(mol: Mol) -> Mol:
         unwanted = list(set(nitrogens) - set(bridge))
         return unwanted
 
-    unwanted = helper(mol)
+    unwanted = __helper(mol)
 
     while len(unwanted) > 0:
         mol = remove_unwanted_NH2(mol, unwanted[0])
-        unwanted = helper(mol)
+        unwanted = __helper(mol)
 
     smi = Chem.CanonSmiles(Chem.MolToSmiles(mol=mol))
     return read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
 
 
-acyl_atoms = [1, 1, 7, 6, 8]
-acyl_graph = nx.Graph()
-for i, atom in enumerate(acyl_atoms):
-    acyl_graph.add_node(i, atom=atom)
-acyl_graph.add_edge(0, 2)
+__acyl_atoms = [1, 1, 7, 6, 8]
+__acyl_graph = nx.Graph()
+for i, atom in enumerate(__acyl_atoms):
+    __acyl_graph.add_node(i, atom=atom)
+__acyl_graph.add_edge(0, 2)
 for i in range(1, 4):
-    acyl_graph.add_edge(i, i + 1)
+    __acyl_graph.add_edge(i, i + 1)
 
 
 def is_acyl(mol: Mol) -> bool:
@@ -227,26 +227,26 @@ def is_acyl(mol: Mol) -> bool:
     """
 
     graph = pure_mol_to_nx(mol)
-    matcher = isomorphism.GraphMatcher(graph, acyl_graph, node_match)
+    matcher = isomorphism.GraphMatcher(graph, __acyl_graph, node_match)
     if not matcher.subgraph_is_isomorphic():
         return False
     mappings = [i for i in matcher.subgraph_isomorphisms_iter()]
     for mapping in mappings:
-        C, O = helper(mapping)[-2:]
+        C, O = __helper(mapping)[-2:]
         bond = mol.GetBondBetweenAtoms(C, O)
         if bond.GetBondTypeAsDouble() == 2:
             return True
     return False
 
 
-urea_atoms = [1, 7, 6, 7, 1, 8]
-urea_graph = nx.Graph()
-for i, atom in enumerate(urea_atoms):
-    urea_graph.add_node(i, atom=atom)
+__urea_atoms = [1, 7, 6, 7, 1, 8]
+__urea_graph = nx.Graph()
+for i, atom in enumerate(__urea_atoms):
+    __urea_graph.add_node(i, atom=atom)
     if i > 0 and i != 5:
-        urea_graph.add_edge(i, i - 1)
+        __urea_graph.add_edge(i, i - 1)
     if i == 5:
-        urea_graph.add_edge(2, i)
+        __urea_graph.add_edge(2, i)
 
 
 def is_urea(mol: Mol) -> bool:
@@ -257,12 +257,12 @@ def is_urea(mol: Mol) -> bool:
     """
 
     graph = pure_mol_to_nx(mol)
-    matcher = isomorphism.GraphMatcher(graph, urea_graph, node_match)
+    matcher = isomorphism.GraphMatcher(graph, __urea_graph, node_match)
     if not matcher.subgraph_is_isomorphic():
         return False
     mappings = [i for i in matcher.subgraph_isomorphisms_iter()]
     for mapping in mappings:
-        plum = helper(mapping)
+        plum = __helper(mapping)
         C, O = plum[2], plum[-1]
         bond = mol.GetBondBetweenAtoms(C, O)
         if bond.GetBondTypeAsDouble() == 2:

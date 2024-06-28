@@ -41,8 +41,10 @@ def aromatic_ring_double_bonds(smi: str) -> list[Bond]:
     return candidates
 
 
-mol_NH2 = read_smiles("N", hydrogens=True)
-N_idx = next(atom for atom in mol_NH2.GetAtoms() if atom.GetAtomicNum() == 7).GetIdx()
+__mol_NH2 = read_smiles("N", hydrogens=True)
+__N_idx = next(
+    atom for atom in __mol_NH2.GetAtoms() if atom.GetAtomicNum() == 7
+).GetIdx()
 
 
 def add_two_NH2_to_bond(bond: Bond) -> Mol:
@@ -60,7 +62,7 @@ def add_two_NH2_to_bond(bond: Bond) -> Mol:
     H.SetIsotope(2)
 
     mol = bond.GetOwningMol()
-    mol = connect_amine_and_deuterium(mol_NH2, N_idx, mol)
-    mol = connect_amine_and_deuterium(mol_NH2, N_idx, mol)
+    mol = connect_amine_and_deuterium(__mol_NH2, __N_idx, mol)
+    mol = connect_amine_and_deuterium(__mol_NH2, __N_idx, mol)
 
     return mol
