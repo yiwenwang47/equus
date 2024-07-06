@@ -5,7 +5,10 @@ import random
 import numpy as np
 import selfies as sf
 from rdkit import Chem
+from rdkit.Chem.rdDetermineBonds import DetermineBondOrders
 from scipy.stats import poisson
+
+from equus.edit import embed, read_smiles, to_smiles
 
 _dir = str(pathlib.Path(__file__).parent.resolve())
 
@@ -13,6 +16,8 @@ with open(os.path.join(_dir, "sf_tokens.txt"), "r") as f:
     _lines = f.readlines()
     f.close()
 
+# pool of selfies tokens, weights are determined by their numbers of occurences in pubchem/enamine subsets
+# weight = number of occurences ** 0.25
 tokens = [line.strip().split(",")[0] for line in _lines]
 weights = np.array([int(line.strip().split(",")[1]) for line in _lines])
 
@@ -56,20 +61,47 @@ def replace_token(smi: str, temperature: int = 1) -> str:
     return sf_tokens_to_smiles(selfie_list)
 
 
-def permute_sf_tokens(smi: str, t: int = 0, temperature: int = 0) -> str:
+def sanity_check(smi):
+    """
+    Very naive method to carry out a sanity check.
+    Should fail to sanitize molecules with unreasonable radicals and charges.
+
+    Note: DetermineBondOrders is known to fail with -NO2 groups
+    """
+    try:
+        mol = read_smiles(smi)
+        embed(mol)
+        DetermineBondOrders(mol)
+        new_smi = to_smiles(mol)
+        return new_smi
+    except:
+        return None
+
+
+def permute_sf_tokens(smi: str, t: int = 0, temperature: int = 1) -> str:
     """
     t: number of permutation steps
     temperature: temperature for sampling
+
+    note: failed cases will be ignored, user is responsible for checking the generated smiles string
     """
+
     new_smi = smi
+
+    # sample number of permutation steps
     if t == 0:
         t = poisson.rvs(0.6) + 1
+
+    # random permutation
     for i in range(t):
-        k = random.randint(0, 3)
+        k = random.randint(0, 2)
         list_of_funcs = [replace_token, delete_token, insert_token]
-        if k != 1:
+        if k == 1:
             new_smi = list_of_funcs[k](new_smi)
         else:
             new_smi = list_of_funcs[k](new_smi, temperature=temperature)
+    new_smi = sanity_check(new_smi)
     if new_smi != None and len(new_smi) > 2:
         return new_smi
+    else:
+        return None
