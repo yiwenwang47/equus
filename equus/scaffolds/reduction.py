@@ -21,7 +21,7 @@ def gaussian_random(b: int, mu: float | None = None, sigma: float | None = None)
     return np.random.choice(candidates, 1, p=weights)[0]
 
 
-def reduce_bonds(smi: str) -> str:
+def reduce_bonds(smi: str, num_bonds_to_reduce: int | None = None) -> str:
 
     mol = read_smiles(smi, no_aromatic_flags=True, hydrogens=False)
 
@@ -33,7 +33,8 @@ def reduce_bonds(smi: str) -> str:
     number = len(bonds_to_reduce)
 
     # sample num_bonds_to_reduce within range of (1, number-1)
-    num_bonds_to_reduce = gaussian_random(number - 1)
+    if num_bonds_to_reduce is None:
+        num_bonds_to_reduce = gaussian_random(number - 1)
 
     # Randomly select bonds to reduce
     selected_bonds = random.sample(bonds_to_reduce, num_bonds_to_reduce)

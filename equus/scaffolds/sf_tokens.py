@@ -61,7 +61,7 @@ def replace_token(smi: str, temperature: int = 1) -> str:
     return sf_tokens_to_smiles(selfie_list)
 
 
-def sanity_check(smi):
+def sanity_check(smi: str) -> str | None:
     """
     Very naive method to carry out a sanity check.
     Should fail to sanitize molecules with unreasonable radicals and charges.
@@ -78,7 +78,7 @@ def sanity_check(smi):
         return None
 
 
-def permute_sf_tokens(smi: str, t: int = 0, temperature: int = 1) -> str:
+def permute_sf_tokens(smi: str, t: int = 0, temperature: int = 1) -> str | None:
     """
     t: number of permutation steps
     temperature: temperature for sampling
