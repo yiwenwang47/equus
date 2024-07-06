@@ -11,10 +11,10 @@ from rdkit.Chem import AllChem
 from equus.edit.iso import node_match, pure_mol_to_nx
 from equus.edit.utils import read_smiles
 
-__form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
-__n_bits = 2048
-__radius = 5
-__fpgen = AllChem.GetMorganGenerator(radius=__radius, fpSize=__n_bits)
+_form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
+_n_bits = 2048
+_radius = 5
+_fpgen = AllChem.GetMorganGenerator(radius=_radius, fpSize=_n_bits)
 
 
 @dataclass
@@ -33,8 +33,8 @@ class Molecules:
             read_smiles(smiles_string=smi, no_aromatic_flags=False, hydrogens=True)
             for smi in self.smiles
         ]
-        self.mol_form = [__form(mol) for mol in self.mols]
-        self.fps = [__fpgen.GetFingerprint(mol) for mol in self.mols]
+        self.mol_form = [_form(mol) for mol in self.mols]
+        self.fps = [_fpgen.GetFingerprint(mol) for mol in self.mols]
         self.n = len(self.smiles)
 
     def __getitem__(self, i: int | str) -> tuple[str, str]:
@@ -50,8 +50,8 @@ class Molecules:
         self.smiles.append(smi)
         mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
         self.mols.append(mol)
-        self.mol_form.append(__form(mol))
-        self.fps.append(__fpgen.GetFingerprint(mol))
+        self.mol_form.append(_form(mol))
+        self.fps.append(_fpgen.GetFingerprint(mol))
         self.n += 1
 
     def search(self, smi: str) -> tuple[bool, str]:
@@ -71,13 +71,13 @@ class Molecules:
 
         # find candidates by molecular formula matching
         mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
-        formula = __form(mol)
+        formula = _form(mol)
         if formula not in self.mol_form:
             return False, ""
 
         # filter the list of candidates by Tanimoto Similarity of Morgan fingerprints
         candidates = [i for i, x in enumerate(self.mol_form) if x == formula]
-        this_fp = __fpgen.GetFingerprint(mol)
+        this_fp = _fpgen.GetFingerprint(mol)
         candidates = [
             i
             for i in candidates
