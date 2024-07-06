@@ -10,7 +10,7 @@ from scipy.stats import poisson
 _dir = str(pathlib.Path(__file__).parent.resolve())
 
 with open(os.path.join(_dir, "sf_tokens.txt"), "r") as f:
-    _lines = f.read()
+    _lines = f.readlines()
     f.close()
 
 tokens = [line.strip().split(",")[0] for line in _lines]
@@ -59,13 +59,17 @@ def replace_token(smi: str, temperature: int = 1) -> str:
 def permute_sf_tokens(smi: str, t: int = 0, temperature: int = 0) -> str:
     """
     t: number of permutation steps
-    T: temperature
+    temperature: temperature for sampling
     """
+    new_smi = smi
     if t == 0:
         t = poisson.rvs(0.6) + 1
     for i in range(t):
         k = random.randint(0, 3)
-    list_of_funcs = [replace_token, delete_token, insert_token]
-    new_smi = list_of_funcs[k](smi)
+        list_of_funcs = [replace_token, delete_token, insert_token]
+        if k != 1:
+            new_smi = list_of_funcs[k](new_smi)
+        else:
+            new_smi = list_of_funcs[k](new_smi, temperature=temperature)
     if new_smi != None and len(new_smi) > 2:
         return new_smi
