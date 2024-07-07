@@ -7,7 +7,7 @@ def aliphatic_ring_double_bonds(smi: str) -> list[Bond]:
 
     """
     Finds all non-aromatic double bonds in rings.
-    Returns a list od Bond objects.
+    Returns a list of Bond objects.
     """
 
     mol = read_smiles(smi, hydrogens=True)
@@ -28,7 +28,7 @@ def aromatic_ring_double_bonds(smi: str) -> list[Bond]:
 
     """
     Finds all aromatic double bonds in rings.
-    Returns a list od Bond objects.
+    Returns a list of Bond objects.
     """
 
     mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)

@@ -1,8 +1,22 @@
-from rdkit import AllChem, Chem
-from rdkit.Chem import rdmolops
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdmolops
+from rdkit.Chem.rdchem import Mol
 from rdkit.Chem.Scaffolds import MurckoScaffold
 
 from equus.edit import read_smiles, to_smiles
+
+
+def find_carbons_by_degree(mol: Mol, degree: int) -> list[int]:
+    """
+    Finds carbon indices.
+    Example: primary carbons, degree=1, pattern=[CH3]
+    """
+    assert degree in [1, 2, 3, 4]
+    num_of_Hs = 4 - degree
+    pattern = Chem.MolFromSmarts(f"[CH{num_of_Hs}]")
+    matches = mol.GetSubstructMatches(pattern)
+    return [i[0] for i in matches]
+
 
 # copied from https://github.com/rdkit/rdkit/discussions/6844
 PATT = Chem.MolFromSmarts("[$([D1]=[*])]")
