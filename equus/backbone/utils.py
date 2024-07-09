@@ -9,11 +9,11 @@ from equus.edit import read_smiles, to_smiles
 def find_carbons_by_degree(mol: Mol, degree: int) -> list[int]:
     """
     Finds carbon indices.
-    Example: primary carbons, degree=1, pattern=[CH3]
+    Example: primary carbons, degree=1, pattern=[#6H3]
     """
     assert degree in [1, 2, 3, 4]
     num_of_Hs = 4 - degree
-    pattern = Chem.MolFromSmarts(f"[CH{num_of_Hs}]")
+    pattern = Chem.MolFromSmarts(f"[#6H{num_of_Hs}]")
     matches = mol.GetSubstructMatches(pattern)
     return [i[0] for i in matches]
 
