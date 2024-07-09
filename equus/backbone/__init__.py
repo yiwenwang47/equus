@@ -1,3 +1,10 @@
+from equus.backbone.add_group import (
+    add_ethyl,
+    add_group,
+    add_halogen,
+    add_isopropyl,
+    add_methyl,
+)
 from equus.backbone.breakage import break_random_single_bond
 from equus.backbone.oxidation import CH2_to_CCH2, CH2_to_CO, CH3_to_CCH, CH3_to_CN
 from equus.backbone.reduction import reduce_bonds

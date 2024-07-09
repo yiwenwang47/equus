@@ -1,6 +1,5 @@
 from random import choice
 
-from rdkit import Chem
 from rdkit.Chem.rdchem import Mol
 
 from equus.edit.utils import connect_base_mol_and_deuterium, read_smiles
