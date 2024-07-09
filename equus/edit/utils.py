@@ -427,7 +427,7 @@ def connect_diimine_with_amine(mol_diimine: Mol, mol_amine: Mol) -> Mol:
 __test_mol = Chem.MolFromSmiles("[2H]F")
 
 
-def connect_amine_and_deuterium(mol1: Mol, idx1: int, mol2: Mol) -> Mol:
+def connect_base_mol_and_deuterium(mol1: Mol, idx1: int, mol2: Mol) -> Mol:
 
     """
     Please make sure that mol1 and mol2 already have explicit
@@ -460,7 +460,7 @@ def connect_amine_and_deuterium(mol1: Mol, idx1: int, mol2: Mol) -> Mol:
 def find_unique_carbons(mol: Mol, num_of_amines: int) -> list[int]:
     """Finds unique carbons for substitution."""
     carbons = find_carbons(mol=mol, num_of_amines=num_of_amines)
-    list_of_mols = [connect_amine_and_deuterium(mol, i, __test_mol) for i in carbons]
+    list_of_mols = [connect_base_mol_and_deuterium(mol, i, __test_mol) for i in carbons]
     idx = find_unique_mols(list_of_mols)
     return [carbons[i] for i in idx]
 

@@ -1,6 +1,6 @@
 from rdkit.Chem.rdchem import Atom, Bond, Mol
 
-from equus.edit.utils import connect_amine_and_deuterium, num_of_Hs, read_smiles
+from equus.edit.utils import connect_base_mol_and_deuterium, num_of_Hs, read_smiles
 
 
 def aliphatic_ring_double_bonds(smi: str) -> list[Bond]:
@@ -62,7 +62,7 @@ def add_two_NH2_to_bond(bond: Bond) -> Mol:
     H.SetIsotope(2)
 
     mol = bond.GetOwningMol()
-    mol = connect_amine_and_deuterium(__mol_NH2, __N_idx, mol)
-    mol = connect_amine_and_deuterium(__mol_NH2, __N_idx, mol)
+    mol = connect_base_mol_and_deuterium(__mol_NH2, __N_idx, mol)
+    mol = connect_base_mol_and_deuterium(__mol_NH2, __N_idx, mol)
 
     return mol
