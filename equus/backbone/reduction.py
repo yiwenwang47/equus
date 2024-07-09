@@ -34,12 +34,15 @@ def reduce_bonds(mol: Mol, list_of_bond_idx: list[int]) -> Mol:
     return editable_mol.GetMol()
 
 
-def randomly_reduce_bonds(smi: str, num_bonds_to_reduce: int | None = None) -> str:
+def randomly_reduce_bonds(mol: Mol, num_bonds_to_reduce: int | None = None) -> Mol:
     """
     Randomly selects double/triple bonds to reduce.
     """
 
-    mol = read_smiles(smi, no_aromatic_flags=True, hydrogens=False)
+    smi = to_smiles(mol)
+    mol = read_smiles(
+        smi, no_aromatic_flags=True, hydrogens=False
+    )  # to maintain some sanity
 
     # Find double and triple bonds in aromatic rings
     bonds_to_reduce = []
@@ -56,4 +59,4 @@ def randomly_reduce_bonds(smi: str, num_bonds_to_reduce: int | None = None) -> s
     selected_bonds = random.sample(bonds_to_reduce, num_bonds_to_reduce)
     new_mol = reduce_bonds(mol, selected_bonds)
 
-    return to_smiles(new_mol)
+    return new_mol

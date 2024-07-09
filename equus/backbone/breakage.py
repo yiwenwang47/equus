@@ -2,18 +2,22 @@ import random
 import warnings
 
 from rdkit import Chem
+from rdkit.Chem.rdchem import Mol
 
 from equus.edit import clean, read_smiles, to_smiles
 
 
-def break_random_single_bond(smi: str) -> str | None:
+def break_random_single_bond(mol: Mol) -> Mol | None:
     """
     Randomly breaks one single bond.
     Does not allow the generated molecule to have a ring with more than 7 atoms.
     User is responsible for dealing with failed cases.
     """
 
-    mol = read_smiles(smi, no_aromatic_flags=True, hydrogens=False)
+    smi = to_smiles(mol)
+    mol = read_smiles(
+        smi, no_aromatic_flags=True, hydrogens=False
+    )  # to maintain some sanity
 
     # Get all single bonds in the molecule
     single_bonds = [
@@ -39,8 +43,11 @@ def break_random_single_bond(smi: str) -> str | None:
 
     # Add hydrogen atoms to the resulting fragments
     mol = clean(Chem.AddHs(mol))
+
+    # big rings are not allowed
     for ring in mol.GetRingInfo().AtomRings():
         if len(ring) > 7:
             warnings.warn("There is a big ring!")
             return None
-    return to_smiles(mol)
+
+    return mol
