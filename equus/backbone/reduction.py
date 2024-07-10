@@ -2,6 +2,7 @@ import random
 
 import numpy as np
 from rdkit import Chem
+from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.rdchem import Mol
 from scipy.stats import norm
 
@@ -49,11 +50,17 @@ def randomly_reduce_bonds(mol: Mol, num_bonds_to_reduce: int | None = None) -> M
     for bond in mol.GetBonds():
         if bond.GetBondTypeAsDouble() > 1:
             bonds_to_reduce.append(bond.GetIdx())
-    number = len(bonds_to_reduce)
 
-    # sample num_bonds_to_reduce within range of (1, number-1)
+    num_of_aromatic_rings = rdMolDescriptors.CalcNumAromaticRings(mol)
+
+    # to preserve aromaticity
+    if num_of_aromatic_rings == 1:
+        print("Only 1 aromatic ring present. Not going to reduce any bonds.")
+        return mol
+
+    # sample num_bonds_to_reduce within range of (1, num_of_aromatic_rings-1)
     if num_bonds_to_reduce is None:
-        num_bonds_to_reduce = gaussian_random(number - 1)
+        num_bonds_to_reduce = gaussian_random(num_of_aromatic_rings - 1)
 
     # Sample bonds to reduce
     selected_bonds = random.sample(bonds_to_reduce, num_bonds_to_reduce)
