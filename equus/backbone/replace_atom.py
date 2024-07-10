@@ -31,7 +31,7 @@ def replace_carbon_atom(mol: Mol, idx: int | None, atomic_num: int | None) -> Mo
     # if not specified, picks a random new atom from {N, O, S}
     if atomic_num is None:
         candidates = [7, 8, 16]
-        weights = np.array([10, 10, 1])
+        weights = np.array([4, 4, 1])
         weights = weights / weights.sum()
         atomic_num = np.random.choice(candidates, 1, p=weights)[0]
 

@@ -6,6 +6,35 @@ from rdkit.Chem.Scaffolds import MurckoScaffold
 from equus.edit import read_smiles, to_smiles
 
 
+def find_carbons_by_num_of_Hs(
+    mol: Mol, min_num_of_Hs: int | None = None, max_num_of_Hs: int | None = None
+) -> list[int]:
+
+    # defines the range of number of Hs allowed
+    if min_num_of_Hs is None and max_num_of_Hs is None:
+        min_num_of_Hs, max_num_of_Hs = 0, 3
+    else:
+        if min_num_of_Hs is None:
+            min_num_of_Hs = 0
+        if max_num_of_Hs is None:
+            max_num_of_Hs = 3
+    assert min_num_of_Hs in [0, 1, 2, 3], "Incorrect min_num_of_Hs!"
+    assert max_num_of_Hs in [0, 1, 2, 3], "Incorrect max_num_of_Hs!"
+    assert max_num_of_Hs >= min_num_of_Hs, "Incorrect (min_num_of_Hs, max_num_of_Hs)!"
+
+    # defines the smarts expression
+    smarts = f"[#6H{min_num_of_Hs}"
+    if max_num_of_Hs > min_num_of_Hs:
+        for i in range(min_num_of_Hs + 1, max_num_of_Hs + 1):
+            smarts += f",#6H{i}"
+    smarts += "]"
+
+    # finds the carbons
+    pattern = Chem.MolFromSmarts(smarts)
+    matches = mol.GetSubstructMatches(pattern)
+    return [i[0] for i in matches]
+
+
 def find_carbons_by_degree(mol: Mol, degree: int) -> list[int]:
     """
     Finds carbon indices.
@@ -13,8 +42,9 @@ def find_carbons_by_degree(mol: Mol, degree: int) -> list[int]:
     """
     assert degree in [1, 2, 3, 4]
     num_of_Hs = 4 - degree
-    pattern = Chem.MolFromSmarts(f"[#6H{num_of_Hs}]")
-    matches = mol.GetSubstructMatches(pattern)
+    find_carbons_by_num_of_Hs(
+        mol=mol, min_num_of_Hs=num_of_Hs, max_num_of_Hs=max_num_of_Hs
+    )
     return [i[0] for i in matches]
 
 
