@@ -18,12 +18,58 @@ def find_carbons_by_degree(mol: Mol, degree: int) -> list[int]:
     return [i[0] for i in matches]
 
 
+def find_carbon_carbon_single_bonds(
+    mol: Mol, min_num_of_Hs: int = 1, filter_for_oxidation: bool = True
+) -> list[int]:
+    """
+    min_num_of_Hs: minimum number of hydrogen atoms each carbon atom should have
+    filter_for_oxidation: if True, carbon atoms connected by the single bonds should not have any pi bonds
+
+    returns a list of bond indices
+    """
+
+    # defines the smarts pattern to match C-C single bonds
+    sub_smarts = f"[#6H{min_num_of_Hs}"
+    for i in range(min_num_of_Hs + 1, 4):
+        sub_smarts += f",#6H{i}"
+    sub_smarts += "]"
+    smarts = f"{sub_smarts}-{sub_smarts}"
+    pattern = Chem.MolFromSmarts(SMARTS=smarts)
+    matches = mol.GetSubstructMatches(pattern)
+
+    # finds the bond indices
+    list_of_bond_idx = []
+    for match in matches:
+        idx_1, idx_2 = match
+        to_keep = True
+
+        # if the bond is to be oxidized, the carbons should not have pi bonds
+        if filter_for_oxidation:
+            C1, C2 = mol.GetAtomWithIdx(idx_1), mol.GetAtomWithIdx(idx_2)
+            for bond in C1.GetBonds():
+                if bond.GetBondTypeAsDouble() > 1:
+                    to_keep = False
+                    break
+            if to_keep:
+                for bond in C2.GetBonds():
+                    if bond.GetBondTypeAsDouble() > 1:
+                        to_keep = False
+                        break
+        if to_keep:
+            bond = mol.GetBondBetweenAtoms(idx_1, idx_2)
+            list_of_bond_idx.append(bond.GetIdx())
+
+    return list_of_bond_idx
+
+
 # copied from https://github.com/rdkit/rdkit/discussions/6844
 PATT = Chem.MolFromSmarts("[$([D1]=[*])]")
 REPL = Chem.MolFromSmarts("[*]")
 
 
-def get_scaffold(mol, real_bm=False, use_csk=False, use_bajorath=False):
+def get_scaffold(
+    mol: Mol, real_bm: bool = False, use_csk: bool = False, use_bajorath: bool = False
+) -> Mol:
     Chem.RemoveStereochemistry(mol)  # important for canonization of CSK!
     scaff = MurckoScaffold.GetScaffoldForMol(mol)
     if use_bajorath:

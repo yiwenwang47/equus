@@ -6,7 +6,13 @@ from equus.backbone.add_group import (
     add_methyl,
 )
 from equus.backbone.breakage import break_random_single_bond
-from equus.backbone.oxidation import CH2_to_CCH2, CH2_to_CO, CH3_to_CCH, CH3_to_CN
+from equus.backbone.oxidation import (
+    CH2_to_CCH2,
+    CH2_to_CO,
+    CH3_to_CCH,
+    CH3_to_CN,
+    oxidize_bonds,
+)
 from equus.backbone.reduction import reduce_bonds
 from equus.backbone.replace_atom import replace_atom, replace_carbon_atom
 from equus.backbone.sf_tokens import (
@@ -15,4 +21,9 @@ from equus.backbone.sf_tokens import (
     permute_sf_tokens,
     replace_token,
 )
-from equus.backbone.utils import find_carbons_by_degree, get_scaffold, validate
+from equus.backbone.utils import (
+    find_carbon_carbon_single_bonds,
+    find_carbons_by_degree,
+    get_scaffold,
+    validate,
+)

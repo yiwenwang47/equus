@@ -5,6 +5,18 @@ from rdkit.Chem.rdchem import Mol, RWMol
 from equus.edit.utils import num_of_Hs
 
 
+def oxidize_bonds(mol: Mol, list_of_bond_idx: list[int]) -> Mol:
+    """
+    Oxidizes the bonds indexed by list_of_bond_idx to double bonds
+    """
+    editable_mol = Chem.RWMol(mol)
+    for bond_idx in list_of_bond_idx:
+        bond = editable_mol.GetBondWithIdx(bond_idx)
+        bond.SetBondType(Chem.rdchem.BondType.DOUBLE)
+    Chem.SanitizeMol(editable_mol)
+    return editable_mol.GetMol()
+
+
 def prep_mol(mol: Mol, idx: int, to_remove: int) -> tuple[RWMol, int]:
     """
     Helper function for oxidation reactions.
