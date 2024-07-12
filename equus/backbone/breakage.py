@@ -2,6 +2,7 @@ import random
 import warnings
 
 from rdkit import Chem
+from rdkit.Chem import rdMolDescriptors, rdmolops
 from rdkit.Chem.rdchem import Mol
 
 from equus.edit import clean, read_smiles, to_smiles
@@ -46,17 +47,24 @@ def break_random_single_bond(mol: Mol) -> Mol | None:
     ]
 
     if not single_bonds:
-        raise ValueError("No single bonds found in the molecule.")
+        warnings.warn("No single bonds found in the molecule.")
+        return rdmolops.AddHs(mol)
 
-    # Randomly select one single bond to break
-    bond_to_break = random.choice(single_bonds)
-    bond_idx = bond_to_break.GetIdx()
-    mol = break_single_bond(mol=mol, bond_idx=bond_idx)
+    num_of_rings = rdMolDescriptors.CalcNumRings(mol)
 
-    # big rings are not allowed
-    for ring in mol.GetRingInfo().AtomRings():
-        if len(ring) > 7:
-            warnings.warn("There is a big ring!")
-            return None
+    if num_of_rings > 1:
 
-    return mol
+        # Randomly select one single bond to break
+        bond_to_break = random.choice(single_bonds)
+        bond_idx = bond_to_break.GetIdx()
+        new_mol = break_single_bond(mol=mol, bond_idx=bond_idx)
+
+        # big rings are not allowed
+        for ring in mol.GetRingInfo().AtomRings():
+            if len(ring) > 7:
+                warnings.warn("There is a big ring!")
+                return rdmolops.AddHs(mol)
+        return rdmolops.AddHs(new_mol)
+
+    else:
+        return rdmolops.AddHs(mol)

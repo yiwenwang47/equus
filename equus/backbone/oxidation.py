@@ -76,6 +76,7 @@ def CH2_to_CO(mol: Mol, idx: int) -> Mol:
     combo = Chem.RWMol(Chem.CombineMols(editable_mol, oxygen))
     combo.AddBond(idx, editable_mol.GetNumAtoms(), order=Chem.rdchem.BondType.DOUBLE)
     final_mol = combo.GetMol()
+    final_mol.UpdatePropertyCache()
 
     return final_mol
 
@@ -101,6 +102,7 @@ def CH2_to_CCH2(mol: Mol, idx: int) -> Mol:
         idx, idx2 + editable_mol.GetNumAtoms(), order=Chem.rdchem.BondType.DOUBLE
     )
     final_mol = combo.GetMol()
+    final_mol.UpdatePropertyCache()
 
     return final_mol
 
@@ -121,6 +123,7 @@ def CH3_to_CN(mol: Mol, idx: int) -> Mol:
     combo = Chem.RWMol(Chem.CombineMols(editable_mol, nitrogen))
     combo.AddBond(idx, editable_mol.GetNumAtoms(), order=Chem.rdchem.BondType.TRIPLE)
     final_mol = combo.GetMol()
+    final_mol.UpdatePropertyCache()
 
     return final_mol
 
@@ -146,5 +149,6 @@ def CH3_to_CCH(mol: Mol, idx: int) -> Mol:
         idx, idx2 + editable_mol.GetNumAtoms(), order=Chem.rdchem.BondType.TRIPLE
     )
     final_mol = combo.GetMol()
+    final_mol.UpdatePropertyCache()
 
     return final_mol

@@ -14,9 +14,20 @@ All editing functions are based on rdkit utilities.
 # helper functions
 
 
+def read_smiles(
+    smiles_string: str, no_aromatic_flags: bool = True, hydrogens: bool = True
+) -> Mol:
+    mol = Chem.MolFromSmiles(smiles_string)
+    if no_aromatic_flags:
+        Chem.Kekulize(mol, clearAromaticFlags=True)
+    if hydrogens:
+        mol = rdmolops.AddHs(mol=mol)
+    return mol
+
+
 def clean(mol: Mol) -> Mol:
     smiles = Chem.MolToSmiles(mol)
-    mol = Chem.MolFromSmiles(smiles, sanitize=False)
+    mol = read_smiles(smiles, no_aromatic_flags=True, hydrogens=True)
     return mol
 
 
@@ -34,17 +45,6 @@ def embed(mol: Mol):
     if mol.GetNumConformers() == 0:
         AllChem.EmbedMolecule(mol)
         AllChem.MMFFOptimizeMolecule(mol)
-
-
-def read_smiles(
-    smiles_string: str, no_aromatic_flags: bool = True, hydrogens: bool = True
-) -> Mol:
-    mol = Chem.MolFromSmiles(smiles_string)
-    if no_aromatic_flags:
-        Chem.Kekulize(mol, clearAromaticFlags=True)
-    if hydrogens:
-        mol = rdmolops.AddHs(mol=mol)
-    return mol
 
 
 def add_Hs(mol: Mol) -> Mol:
@@ -391,8 +391,13 @@ def connect_two_fragments(naked_1: Mol, naked_2: Mol) -> Mol:
         next(find_naked_atom_idx(naked_2)),
     )
     combo = Chem.EditableMol(Chem.CombineMols(naked_1, naked_2))
-    combo.AddBond(idx1, idx2 + naked_1.GetNumAtoms(), order=Chem.rdchem.BondType.SINGLE)
+    combo.AddBond(
+        beginAtomIdx=idx1,
+        endAtomIdx=idx2 + naked_1.GetNumAtoms(),
+        order=Chem.rdchem.BondType.SINGLE,
+    )
     final_mol = combo.GetMol()
+    final_mol.UpdatePropertyCache()
     return final_mol
 
 

@@ -4,6 +4,7 @@ from rdkit.Chem import rdmolops
 from rdkit.Chem.rdchem import Mol
 
 from equus.backbone.utils import find_carbons_by_degree
+from equus.edit.utils import clean
 
 
 def replace_atom(mol: Mol, idx: int, atomic_num: int) -> Mol:
@@ -37,6 +38,7 @@ def replace_atom(mol: Mol, idx: int, atomic_num: int) -> Mol:
                 atom.SetAtomMapNum(0)
                 break
         new_mol = editable_mol.GetMol()
+        new_mol.UpdatePropertyCache()
 
     return new_mol
 
@@ -64,7 +66,12 @@ def replace_carbon_atom(
     if idx is None:
         carbons = find_carbons_by_degree(mol=mol, degree=2)
         if atomic_num == 7:
-            carbons += find_carbons_by_degree(mol=mol, degree=3)
+            carbons = find_carbons_by_degree(
+                mol=mol, degree=2
+            ) + find_carbons_by_degree(mol=mol, degree=3)
+        if len(carbons) == 0:
+            print("Nothing to replace.")
+            return mol
         idx = int(np.random.choice(carbons, 1)[0])
 
     return replace_atom(mol=mol, idx=idx, atomic_num=atomic_num)

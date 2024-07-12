@@ -13,7 +13,7 @@ from equus.backbone.oxidation import (
     CH3_to_CN,
     oxidize_single_bond,
 )
-from equus.backbone.reduction import randomly_reduce_bonds, reduce_bonds
+from equus.backbone.reduction import randomly_reduce_bonds, reduce_one_bond
 from equus.backbone.replace_atom import replace_atom, replace_carbon_atom
 from equus.backbone.sf_tokens import (
     delete_token,
