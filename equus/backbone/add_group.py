@@ -34,7 +34,7 @@ def add_halogen(mol: Mol, idx: int, halogen: str) -> Mol:
 # Miscellaneous
 
 
-def add_group(mol: Mol, idx: int, key: str | None) -> Mol:
+def add_group(mol: Mol, idx: int, key: str | None = None) -> Mol:
 
     groups = {
         "CF3": "[2H]C(F)(F)F",
@@ -48,7 +48,7 @@ def add_group(mol: Mol, idx: int, key: str | None) -> Mol:
     }
 
     if key is None:
-        key = choice(groups.keys())
+        key = choice(list(groups.keys()))
 
     group = read_smiles(groups[key])
     return connect_base_mol_and_deuterium(mol, idx, group)

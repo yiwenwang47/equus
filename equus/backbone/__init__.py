@@ -11,9 +11,9 @@ from equus.backbone.oxidation import (
     CH2_to_CO,
     CH3_to_CCH,
     CH3_to_CN,
-    oxidize_bonds,
+    oxidize_single_bond,
 )
-from equus.backbone.reduction import reduce_bonds
+from equus.backbone.reduction import randomly_reduce_bonds, reduce_bonds
 from equus.backbone.replace_atom import replace_atom, replace_carbon_atom
 from equus.backbone.sf_tokens import (
     delete_token,
@@ -24,6 +24,7 @@ from equus.backbone.sf_tokens import (
 from equus.backbone.utils import (
     find_carbon_carbon_single_bonds,
     find_carbons_by_degree,
+    find_carbons_by_num_of_Hs,
     get_scaffold,
     validate,
 )

@@ -42,10 +42,9 @@ def find_carbons_by_degree(mol: Mol, degree: int) -> list[int]:
     """
     assert degree in [1, 2, 3, 4]
     num_of_Hs = 4 - degree
-    find_carbons_by_num_of_Hs(
-        mol=mol, min_num_of_Hs=num_of_Hs, max_num_of_Hs=max_num_of_Hs
+    return find_carbons_by_num_of_Hs(
+        mol=mol, min_num_of_Hs=num_of_Hs, max_num_of_Hs=num_of_Hs
     )
-    return [i[0] for i in matches]
 
 
 def find_carbon_carbon_single_bonds(

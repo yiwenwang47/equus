@@ -5,14 +5,21 @@ from rdkit.Chem.rdchem import Mol, RWMol
 from equus.edit.utils import num_of_Hs
 
 
-def oxidize_bonds(mol: Mol, list_of_bond_idx: list[int]) -> Mol:
+def oxidize_single_bond(mol: Mol, idx: int) -> Mol:
     """
-    Oxidizes the bonds indexed by list_of_bond_idx to double bonds
+    Oxidizes one single indexed by idx to a double bond.
+
+    Note: As always, mol should have explicit hydrogens!!!!
     """
+
     editable_mol = Chem.RWMol(mol)
-    for bond_idx in list_of_bond_idx:
-        bond = editable_mol.GetBondWithIdx(bond_idx)
-        bond.SetBondType(Chem.rdchem.BondType.DOUBLE)
+    bond = editable_mol.GetBondWithIdx(idx)
+    bond.SetBondType(Chem.rdchem.BondType.DOUBLE)
+    for atom in [bond.GetBeginAtom(), bond.GetEndAtom()]:
+        for neighbor in atom.GetNeighbors():
+            if neighbor.GetAtomicNum() == 1:
+                editable_mol.RemoveAtom(neighbor.GetIdx())
+                break
     Chem.SanitizeMol(editable_mol)
     return editable_mol.GetMol()
 
