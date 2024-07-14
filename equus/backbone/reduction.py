@@ -50,7 +50,9 @@ def find_unsaturated_bonds(mol: Mol) -> list[int]:
     return bonds_to_reduce
 
 
-def randomly_reduce_bonds(mol: Mol, num_bonds_to_reduce: int | None = None) -> Mol:
+def randomly_reduce_bonds(
+    mol: Mol, num_bonds_to_reduce: int | None = None, verbose: bool = False
+) -> Mol:
     """
     Randomly selects double/triple bonds to reduce.
     """
@@ -64,9 +66,10 @@ def randomly_reduce_bonds(mol: Mol, num_bonds_to_reduce: int | None = None) -> M
 
     # to preserve aromaticity
     if num_of_aromatic_rings <= 1:
-        print(
-            f"Only {num_of_aromatic_rings} aromatic ring(s) present. Not going to reduce any bonds."
-        )
+        if verbose:
+            print(
+                f"Only {num_of_aromatic_rings} aromatic ring(s) present. Not going to reduce any bonds."
+            )
         return mol
 
     # sample num_bonds_to_reduce within range of (1, num_of_aromatic_rings-1)

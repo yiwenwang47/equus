@@ -44,7 +44,10 @@ def replace_atom(mol: Mol, idx: int, atomic_num: int) -> Mol:
 
 
 def replace_carbon_atom(
-    mol: Mol, idx: int | None = None, atomic_num: int | None = None
+    mol: Mol,
+    idx: int | None = None,
+    atomic_num: int | None = None,
+    verbose: bool = False,
 ) -> Mol:
 
     """
@@ -83,7 +86,8 @@ def replace_carbon_atom(
                 real_carbons.append(i)
 
         if len(real_carbons) == 0:
-            print("Nothing to replace.")
+            if verbose:
+                print("Nothing to replace.")
             return mol
         idx = int(np.random.choice(real_carbons, 1)[0])
 
