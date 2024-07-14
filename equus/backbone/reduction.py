@@ -14,14 +14,17 @@ def gaussian_random(b: int, mu: float | None = None, sigma: float | None = None)
     samples an integer using a Gaussian dist within [1, b]
     """
     assert b >= 1
-    if mu is None:
-        mu = (b + 1) / 2  # default mean is the midpoint of the range
-    if sigma is None:
-        sigma = (b - 1) / 3  # default standard deviation is 1/3 of the range
-    candidates = np.arange(b) + 1
-    weights = norm.pdf(candidates, mu, sigma)
-    weights /= weights.sum()
-    return np.random.choice(candidates, 1, p=weights)[0]
+    if b > 1:
+        if mu is None:
+            mu = (b + 1) / 2  # default mean is the midpoint of the range
+        if sigma is None:
+            sigma = (b - 1) / 3  # default standard deviation is 1/3 of the range
+        candidates = np.arange(b) + 1
+        weights = norm.pdf(candidates, mu, sigma)
+        weights /= weights.sum()
+        return np.random.choice(candidates, 1, p=weights)[0]
+    else:
+        return 1
 
 
 def reduce_one_bond(mol: Mol, bond_idx: int) -> Mol:
@@ -62,7 +65,7 @@ def randomly_reduce_bonds(mol: Mol, num_bonds_to_reduce: int | None = None) -> M
     # to preserve aromaticity
     if num_of_aromatic_rings <= 1:
         print(
-            f"Only {num_of_aromatic_rings} aromatic ring present. Not going to reduce any bonds."
+            f"Only {num_of_aromatic_rings} aromatic ring(s) present. Not going to reduce any bonds."
         )
         return mol
 

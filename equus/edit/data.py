@@ -6,7 +6,7 @@ import pandas as pd
 from networkx.algorithms import isomorphism
 from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem
+from rdkit.Chem import AllChem, Draw
 
 from equus.edit.iso import node_match, pure_mol_to_nx
 from equus.edit.utils import read_smiles
@@ -21,7 +21,7 @@ _fpgen = AllChem.GetMorganGenerator(radius=_radius, fpSize=_n_bits)
 class Molecules:
 
     """
-    Class for keeping track of molecules.
+    Molecule pool.
     Has a search method.
     """
 
@@ -44,6 +44,11 @@ class Molecules:
 
     def __len__(self) -> int:
         return self.n
+
+    def head(self, k: int = 10):
+        return Draw.MolsToGridImage(
+            mols=[Chem.MolFromSmiles(smi) for smi in self.smiles[:k]]
+        )
 
     def add(self, name: str, smi: str):
         self.names.append(name)

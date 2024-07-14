@@ -69,9 +69,22 @@ def replace_carbon_atom(
             carbons = find_carbons_by_degree(
                 mol=mol, degree=2
             ) + find_carbons_by_degree(mol=mol, degree=3)
-        if len(carbons) == 0:
+
+        # the carbon to be replaced should not have strange neighbors (halogens, for instance)
+        real_carbons = []
+        for i in carbons:
+            to_keep = True
+            atom = mol.GetAtomWithIdx(i)
+            for neighbor in atom.GetNeighbors():
+                if neighbor.GetAtomicNum() not in [1, 6, 7, 8, 16]:
+                    to_keep = False
+                    break
+            if to_keep:
+                real_carbons.append(i)
+
+        if len(real_carbons) == 0:
             print("Nothing to replace.")
             return mol
-        idx = int(np.random.choice(carbons, 1)[0])
+        idx = int(np.random.choice(real_carbons, 1)[0])
 
     return replace_atom(mol=mol, idx=idx, atomic_num=atomic_num)

@@ -112,7 +112,7 @@ def get_scaffold(
     return scaff
 
 
-def validate(smi: str) -> bool:
+def validate(smi: str, verbose: bool = False) -> bool:
     """
     To make sure the generated molecule is reasonable.
     Written for sf_tokens.permute_sf_tokens
@@ -122,27 +122,73 @@ def validate(smi: str) -> bool:
 
     # no fragments
     if len(rdmolops.GetMolFrags(mol, asMols=True)) > 1:
+        if verbose:
+            print("Multiple fragments!")
         return False
 
     # no triple bonds in rings
     for bond in mol.GetBonds():
         if bond.GetBondTypeAsDouble() == 3:
             if bond.IsInRing():
+                if verbose:
+                    print("Found a triple bond in a ring!")
                 return False
 
     # no X=X=X sub structure
     smarts = "*=*=*"
     pattern = Chem.MolFromSmarts(smarts)
     if any(mol.GetSubstructMatches(pattern)):
+        if verbose:
+            print("Consecutive double/triple bonds!")
         return False
     smarts = "*=*#*"
     pattern = Chem.MolFromSmarts(smarts)
     if any(mol.GetSubstructMatches(pattern)):
+        if verbose:
+            print("Consecutive double/triple bonds!")
         return False
+
+    # no O-C#N sub structure
+    smarts = "O-C#N"
+    pattern = Chem.MolFromSmarts(smarts)
+    if any(mol.GetSubstructMatches(pattern)):
+        if verbose:
+            print("O connected to CN!")
+        return False
+
+    # no H-N-N-H
+    smarts = "[#7H1,#7H2]~[#7H1,#7H2]"
+    pattern = Chem.MolFromSmarts(smarts)
+    if any(mol.GetSubstructMatches(pattern)):
+        if verbose:
+            print("Found a H-N-N-H sub structure!")
+        return False
+
+    # no 3-hetero-atoms-in-a-row sub structure
+    smarts = "[#7,#8,#16,#9,#17,#35,#53]~[#7,#8,#16,#9,#17,#35,#53]~[#7,#8,#16,#9,#17,#35,#53]"  # N, O, S, F, Cl, Br, I
+    pattern = Chem.MolFromSmarts(smarts)
+    if any(mol.GetSubstructMatches(pattern)):
+        if verbose:
+            print("Found 3 hetero atoms in a row!")
+        return False
+
+    # no quaternary carbon (4 single bonds) connected to a hetero atom
+    mol_implicit_H = read_smiles(smi, no_aromatic_flags=True, hydrogens=False)
+    carbons = find_carbons_by_degree(mol=mol_implicit_H, degree=4)
+    for carbon in carbons:
+        atom = mol.GetAtomWithIdx(carbon)
+        if atom.GetDegree() == 4:
+            for neighbor in atom.GetNeighbors():
+                if neighbor.GetAtomicNum() not in [1, 6]:
+                    if verbose:
+                        print("Found a quaternary carbon connected to a hetero atom!")
+                    return False
 
     # no radicals
     for atom in mol.GetAtoms():
         if atom.GetNumRadicalElectrons() > 0:
+            if verbose:
+                print("Found a radical!")
             return False
 
     # no charges on atoms unless the atoms belong to a -NO2 group
@@ -154,6 +200,8 @@ def validate(smi: str) -> bool:
         if atom.GetFormalCharge() != 0:
             idx = atom.GetIdx()
             if idx not in nitro_atom_idx:
+                if verbose:
+                    print("Found a formal charge!")
                 return False
 
     return True
