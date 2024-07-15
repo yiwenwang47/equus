@@ -6,7 +6,7 @@ from rdkit.Chem import rdMolDescriptors, rdmolops
 from rdkit.Chem.rdchem import Mol
 from scipy.stats import norm
 
-from equus.edit import clean, read_smiles, to_smiles
+from equus.diamine import read_smiles, to_smiles
 
 
 def gaussian_random(b: int, mu: float | None = None, sigma: float | None = None) -> int:
