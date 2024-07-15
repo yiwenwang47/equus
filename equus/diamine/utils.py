@@ -5,7 +5,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdDetermineBonds, rdmolops
 from rdkit.Chem.rdchem import Atom, Bond, Mol
 
-from equus.edit.iso import *
+from equus.diamine.iso import *
 
 """
 All editing functions are based on rdkit utilities.
