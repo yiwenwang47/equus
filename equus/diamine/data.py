@@ -8,8 +8,8 @@ from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw
 
-from equus.edit.iso import node_match, pure_mol_to_nx
-from equus.edit.utils import read_smiles
+from equus.diamine.iso import node_match, pure_mol_to_nx
+from equus.diamine.utils import read_smiles
 
 _form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
 _n_bits = 2048

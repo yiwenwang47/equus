@@ -1,6 +1,6 @@
 from rdkit.Chem.rdchem import Atom, Bond, Mol
 
-from equus.edit.utils import connect_base_mol_and_deuterium, num_of_Hs, read_smiles
+from equus.diamine.utils import connect_base_mol_and_deuterium, num_of_Hs, read_smiles
 
 
 def aliphatic_ring_double_bonds(smi: str) -> list[Bond]:

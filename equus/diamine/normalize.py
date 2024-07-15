@@ -6,8 +6,8 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 from rdkit.Chem.rdchem import Atom, Bond, Mol
 
-from equus.edit.iso import node_match
-from equus.edit.utils import (
+from equus.diamine.iso import node_match
+from equus.diamine.utils import (
     clean,
     find_atom_indices,
     find_naked_atom_idx,
