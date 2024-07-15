@@ -119,6 +119,7 @@ def validate(smi: str, verbose: bool = False) -> bool:
     """
 
     mol = read_smiles(smi, no_aromatic_flags=True, hydrogens=True)
+    mol_aromatic = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
 
     # no fragments
     if len(rdmolops.GetMolFrags(mol, asMols=True)) > 1:
@@ -148,12 +149,25 @@ def validate(smi: str, verbose: bool = False) -> bool:
             print("Consecutive double/triple bonds!")
         return False
 
-    # no O-C#N sub structure
-    smarts = "O-C#N"
+    # no O-C-N or S-C-N sub structure
+    pattern1 = Chem.MolFromSmarts("[#7,#16]-C-N")
+    pattern2 = Chem.MolFromSmarts("[#7,#16]-C=N")
+    pattern3 = Chem.MolFromSmarts("[#7,#16]-C#N")
+    if (
+        any(mol.GetSubstructMatches(pattern3))
+        or any(mol_aromatic.GetSubstructMatches(pattern1))
+        or any(mol_aromatic.GetSubstructMatches(pattern2))
+    ):
+        if verbose:
+            print("O/S connected to CN!")
+        return False
+
+    # no C=N-H sub structure
+    smarts = "[#6]=[#7H1]"
     pattern = Chem.MolFromSmarts(smarts)
     if any(mol.GetSubstructMatches(pattern)):
         if verbose:
-            print("O connected to CN!")
+            print("Found a C=N-H sub structure!")
         return False
 
     # no H-N-N-H
@@ -162,6 +176,14 @@ def validate(smi: str, verbose: bool = False) -> bool:
     if any(mol.GetSubstructMatches(pattern)):
         if verbose:
             print("Found a H-N-N-H sub structure!")
+        return False
+
+    # no B=C bonds
+    smarts = "[#5]=[#6]"
+    pattern = Chem.MolFromSmarts(smarts)
+    if any(mol_aromatic.GetSubstructMatches(pattern)):
+        if verbose:
+            print("Found a B=C double bond!")
         return False
 
     # no 3-hetero-atoms-in-a-row sub structure

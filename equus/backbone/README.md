@@ -10,5 +10,10 @@ Replacing atoms.
 Replacing SELFIES tokens.  
 Adding small groups. (This is not necessarily only for backbone generation.)
 
-Note:
 To convert backbones to diamines/diimines, please use equus.edit.generate.
+
+## Important
+
+It is probably not a good idea to use these methods to create a dataset for model training. The distribution of the randomly generated molecules has little meaning, merely reflecting the bias of the person who defines the pseudo_diffusion method. 
+
+Instead, this submodule will be used as a baseline method.
