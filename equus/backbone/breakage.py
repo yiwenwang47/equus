@@ -5,7 +5,7 @@ from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors, rdmolops
 from rdkit.Chem.rdchem import Mol
 
-from equus.edit import clean, read_smiles, to_smiles
+from equus.diamine import clean, read_smiles, to_smiles
 
 
 def break_single_bond(mol: Mol, bond_idx: int) -> Mol:

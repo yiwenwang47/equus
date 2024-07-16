@@ -4,7 +4,7 @@ from rdkit.Chem import rdmolops
 from rdkit.Chem.rdchem import Mol
 
 from equus.backbone.utils import find_carbons_by_degree
-from equus.edit.utils import clean
+from equus.diamine.utils import clean
 
 
 def replace_atom(mol: Mol, idx: int, atomic_num: int) -> Mol:

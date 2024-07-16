@@ -2,7 +2,7 @@ from rdkit import Chem
 from rdkit.Chem import rdmolops
 from rdkit.Chem.rdchem import Mol, RWMol
 
-from equus.edit.utils import num_of_Hs
+from equus.diamine.utils import num_of_Hs
 
 
 def oxidize_single_bond(mol: Mol, idx: int) -> Mol:

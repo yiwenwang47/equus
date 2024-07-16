@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "wheel", "toml"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "equus"
+version = "0.1.0"
+description = "Package for diamines"
+readme = "README.md"
+authors = [
+    { name = "Yiwen Wang", email = "yiwenwang9702@gmail.com" }
+]
+license = {file = "LICENSE"}
+homepage = "https://github.com/yiwenwang47/equus"
+
+dependencies = [
+    "networkx==3.3",
+    "numpy>=1.24.0,<2.0.0",
+    "pandas>=2.0.0",
+    "pillow>=9.4.0",
+    "pytz>=2024.1",
+    "rdkit==2024.3.1",
+    "scipy>=1.11.0",
+    "selfies==2.1.1",
+    "tzdata==2024.1"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yiwenwang47/equus"

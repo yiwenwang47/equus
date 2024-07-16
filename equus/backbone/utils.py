@@ -3,7 +3,7 @@ from rdkit.Chem import AllChem, rdmolops
 from rdkit.Chem.rdchem import Mol
 from rdkit.Chem.Scaffolds import MurckoScaffold
 
-from equus.edit import read_smiles, to_smiles
+from equus.diamine import read_smiles
 
 
 def find_carbons_by_num_of_Hs(
