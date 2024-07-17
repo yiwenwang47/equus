@@ -1,3 +1,4 @@
+from rdkit import Chem
 from rdkit.Chem.rdchem import Atom, Bond, Mol
 
 from equus.diamine.utils import connect_base_mol_and_deuterium, num_of_Hs, read_smiles
@@ -41,10 +42,8 @@ def aromatic_ring_double_bonds(smi: str) -> list[Bond]:
     return candidates
 
 
-__mol_NH2 = read_smiles("N", hydrogens=True)
-__N_idx = next(
-    atom for atom in __mol_NH2.GetAtoms() if atom.GetAtomicNum() == 7
-).GetIdx()
+_mol_NH2 = read_smiles("N", hydrogens=True)
+_N_idx = next(atom for atom in _mol_NH2.GetAtoms() if atom.GetAtomicNum() == 7).GetIdx()
 
 
 def add_two_NH2_to_bond(bond: Bond) -> Mol:
@@ -62,7 +61,8 @@ def add_two_NH2_to_bond(bond: Bond) -> Mol:
     H.SetIsotope(2)
 
     mol = bond.GetOwningMol()
-    mol = connect_base_mol_and_deuterium(__mol_NH2, __N_idx, mol)
-    mol = connect_base_mol_and_deuterium(__mol_NH2, __N_idx, mol)
+    Chem.Kekulize(mol=mol, clearAromaticFlags=True)
+    mol = connect_base_mol_and_deuterium(_mol_NH2, _N_idx, mol)
+    mol = connect_base_mol_and_deuterium(_mol_NH2, _N_idx, mol)
 
     return mol
