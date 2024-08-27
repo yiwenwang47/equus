@@ -11,13 +11,10 @@ def find_carbons_by_num_of_Hs(
 ) -> list[int]:
 
     # defines the range of number of Hs allowed
-    if min_num_of_Hs is None and max_num_of_Hs is None:
-        min_num_of_Hs, max_num_of_Hs = 0, 3
-    else:
-        if min_num_of_Hs is None:
-            min_num_of_Hs = 0
-        if max_num_of_Hs is None:
-            max_num_of_Hs = 3
+    if min_num_of_Hs is None:
+        min_num_of_Hs = 0
+    if max_num_of_Hs is None:
+        max_num_of_Hs = 3
     assert min_num_of_Hs in [0, 1, 2, 3], "Incorrect min_num_of_Hs!"
     assert max_num_of_Hs in [0, 1, 2, 3], "Incorrect max_num_of_Hs!"
     assert max_num_of_Hs >= min_num_of_Hs, "Incorrect (min_num_of_Hs, max_num_of_Hs)!"

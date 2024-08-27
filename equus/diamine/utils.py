@@ -346,33 +346,63 @@ def fix_NO2(mol: Mol) -> Mol:
     return mol
 
 
-def primary_diamine_to_diimine(smi: str) -> str:
+# def primary_diamine_to_diimine(smi: str) -> str:
+
+#     """
+#     smi: SMILES of primary diamine
+#     di_smi: SMILES of converted diimine
+#     """
+
+#     mol = Chem.MolFromSmiles(smi)
+#     mol = rdmolops.AddHs(mol)
+#     Chem.Kekulize(mol, clearAromaticFlags=True)
+
+#     # generates conformer, this is absolutely needed to correctly determine connectivity
+#     embed(mol)
+
+#     # removes two hydrogens
+#     mol = remove_one_H_from_NH2(mol)
+#     mol = remove_one_H_from_NH2(mol)
+
+#     try:
+#         mol = naive_diimine_fix(mol)
+#     except:
+#         rdDetermineBonds.DetermineBonds(mol, charge=0)
+
+#     # generates SMILES for diimine
+#     di_smi = to_smiles(mol)
+#     if Descriptors.NumRadicalElectrons(mol) > 0:
+#         return Chem.CanonSmiles(rm_radicals(di_smi))
+#     return di_smi
+
+
+def diamine_to_diimine(smi: str, degree: int = 1) -> str:
 
     """
     smi: SMILES of primary diamine
+    degree: 1 -> primary, 2 -> secondary
     di_smi: SMILES of converted diimine
     """
 
+    assert degree in [1, 2], "Degree must be either 1 or 2."
+    prefix = "primary" if degree == 1 else "secondary"
+    num_of_Hs = 3 - degree
+
     mol = Chem.MolFromSmiles(smi)
-    mol = rdmolops.AddHs(mol)
-    Chem.Kekulize(mol, clearAromaticFlags=True)
 
-    # generates conformer, this is absolutely needed to correctly determine connectivity
-    embed(mol)
+    bridge_smarts = f"[#7H{num_of_Hs}]-[#6]~[#6]-[#7H{num_of_Hs}]"
+    bridge = Chem.MolFromSmarts(bridge_smarts)
 
-    # removes two hydrogens
-    mol = remove_one_H_from_NH2(mol)
-    mol = remove_one_H_from_NH2(mol)
+    assert any(
+        mol.GetSubstructMatches(bridge)
+    ), f"The molecule does not contain a {prefix} diamine."
 
-    try:
-        mol = naive_diimine_fix(mol)
-    except:
-        rdDetermineBonds.DetermineBonds(mol, charge=0)
+    reaction_smarts = f"[#7H{num_of_Hs}:1]-[#6:2]~[#6:3]-[#7H{num_of_Hs}:4]>>[#7H{num_of_Hs-1}:1]=[#6:2]-[#6:3]=[#7H{num_of_Hs-1}:4]"
+    reaction = AllChem.ReactionFromSmarts(reaction_smarts)
 
-    # generates SMILES for diimine
-    di_smi = to_smiles(mol)
-    if Descriptors.NumRadicalElectrons(mol) > 0:
-        return Chem.CanonSmiles(rm_radicals(di_smi))
+    product = reaction.RunReactants([mol])[0][0]
+    di_smi = Chem.CanonSmiles(Chem.MolToSmiles(product))
+
     return di_smi
 
 
