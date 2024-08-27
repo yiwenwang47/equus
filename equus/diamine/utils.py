@@ -376,7 +376,7 @@ def fix_NO2(mol: Mol) -> Mol:
 #     return di_smi
 
 
-def diamine_to_diimine(smi: str, degree: int = 1) -> str:
+def diamine_to_diimine(smi: str, degree: int = 1, verbose: bool = False) -> str:
 
     """
     smi: SMILES of primary diamine
@@ -400,10 +400,16 @@ def diamine_to_diimine(smi: str, degree: int = 1) -> str:
     reaction_smarts = f"[#7H{num_of_Hs}:1]-[#6:2]~[#6:3]-[#7H{num_of_Hs}:4]>>[#7H{num_of_Hs-1}:1]=[#6:2]-[#6:3]=[#7H{num_of_Hs-1}:4]"
     reaction = AllChem.ReactionFromSmarts(reaction_smarts)
 
-    product = reaction.RunReactants([mol])[0][0]
-    di_smi = Chem.CanonSmiles(Chem.MolToSmiles(product))
-
-    return di_smi
+    products = [i[0] for i in reaction.RunReactants([mol])]
+    # return products
+    for product in products:
+        try:
+            Chem.SanitizeMol(product)
+            di_smi = Chem.CanonSmiles(Chem.MolToSmiles(product))
+            return di_smi
+        except:
+            if verbose:
+                print("Failed to sanitize the diimine.")
 
 
 # code for assembling
