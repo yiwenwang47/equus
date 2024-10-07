@@ -6,4 +6,4 @@ This is a project focusing on rapid virtual screening of aromatic 1,2-diamines a
     <img src="scheme_colored_small.jpg" alt="Scheme" title="Scheme" width="300"/>
 </p>
 
-Code for virtual screening, regression and generation will be made public soon.
+Data, code for regression and generation will be made public soon.
