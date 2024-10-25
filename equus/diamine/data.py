@@ -16,6 +16,7 @@ from equus.diamine.utils import read_smiles
 
 
 def mol_iso(mol1: Mol, mol2: Mol) -> bool:
+    print("checking")
     return any(mol1.GetSubstructMatches(mol2)) and any(mol2.GetSubstructMatches(mol1))
 
 
@@ -73,7 +74,7 @@ class Molecules:
         self.mol_form_dict[formula].append(i)
         self.n += 1
 
-    def search(self, smi: str) -> tuple[bool, str]:
+    def search(self, smi: str, verbose=False) -> tuple[bool, str]:
         """
         Returns:
         True, name if molecule is found.
@@ -82,17 +83,26 @@ class Molecules:
 
         # naive smiles matching
         smi = Chem.CanonSmiles(smi)
-        try:
+        print(smi)
+        if smi in self.smiles:
             i = self.smiles.index(smi)
-            return True, self.name[i]
-        except:
-            pass
+            return True, self.names[i]
+
+        if verbose:
+            print(
+                "Did not find exact SMILES match. Moving on to molecular formula matching."
+            )
 
         # find candidates by molecular formula matching
         mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
         formula = _form(mol)
         if formula not in self.mol_form_dict:
             return False, ""
+
+        if verbose:
+            print(
+                "Found candidates by molecular formula matching. Moving on to fingerprint matching."
+            )
 
         # filter the list of candidates by Tanimoto Similarity of Morgan fingerprints
         candidates = self.mol_form_dict[formula]
@@ -104,6 +114,12 @@ class Molecules:
         ]
         if len(candidates) == 0:
             return False, ""
+
+        if verbose:
+            print(
+                "Found candidates by fingerprint matching. Moving on to isomorphism matching."
+            )
+            print("Number of candidates:", len(candidates))
 
         # this_graph = pure_mol_to_nx(mol)
         # for i in candidates:
