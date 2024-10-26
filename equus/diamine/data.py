@@ -16,7 +16,6 @@ from equus.diamine.utils import read_smiles
 
 
 def mol_iso(mol1: Mol, mol2: Mol) -> bool:
-    print("checking")
     return any(mol1.GetSubstructMatches(mol2)) and any(mol2.GetSubstructMatches(mol1))
 
 
