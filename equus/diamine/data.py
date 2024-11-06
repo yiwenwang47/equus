@@ -82,7 +82,6 @@ class Molecules:
 
         # naive smiles matching
         smi = Chem.CanonSmiles(smi)
-        print(smi)
         if smi in self.smiles:
             i = self.smiles.index(smi)
             return True, self.names[i]

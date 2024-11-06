@@ -390,14 +390,14 @@ def diamine_to_diimine(smi: str, degree: int = 1, verbose: bool = False) -> str:
 
     mol = Chem.MolFromSmiles(smi)
 
-    bridge_smarts = f"[#7H{num_of_Hs}]-[#6]~[#6]-[#7H{num_of_Hs}]"
+    bridge_smarts = f"[#7H{num_of_Hs}]-[c][c]-[#7H{num_of_Hs}]"
     bridge = Chem.MolFromSmarts(bridge_smarts)
 
     assert any(
         mol.GetSubstructMatches(bridge)
     ), f"The molecule does not contain a {prefix} diamine."
 
-    reaction_smarts = f"[#7H{num_of_Hs}:1]-[#6:2]~[#6:3]-[#7H{num_of_Hs}:4]>>[#7H{num_of_Hs-1}:1]=[#6:2]-[#6:3]=[#7H{num_of_Hs-1}:4]"
+    reaction_smarts = f"[#7H{num_of_Hs}:1]-[c:2][c:3]-[#7H{num_of_Hs}:4]>>[#7H{num_of_Hs-1}:1]=[c:2]-[c:3]=[#7H{num_of_Hs-1}:4]"
     reaction = AllChem.ReactionFromSmarts(reaction_smarts)
 
     products = [i[0] for i in reaction.RunReactants([mol])]
@@ -408,6 +408,7 @@ def diamine_to_diimine(smi: str, degree: int = 1, verbose: bool = False) -> str:
             di_smi = Chem.CanonSmiles(Chem.MolToSmiles(product))
             return di_smi
         except:
+            print(f"The following diamine appears to be problematic: {smi}.")
             if verbose:
                 print("Failed to sanitize the diimine.")
 
