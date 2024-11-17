@@ -1,0 +1,5 @@
+rdkit>=2024.3.5
+numpy>=2.0.2
+scipy>=1.14.0
+network>=3.4.1
+pandas>=2.2.3
