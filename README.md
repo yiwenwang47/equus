@@ -6,4 +6,24 @@ This is a project focusing on rapid virtual screening of aromatic 1,2-diamines a
     <img src="scheme_colored_small.jpg" alt="Scheme" title="Scheme" width="300"/>
 </p>
 
-Data, code for regression and generation will be made public soon.
+Data, code for BDFE evaluation will be made public soon.
+
+## Installation
+
+Please create a virtual environment by running the following.
+```sh
+conda create -n equus python=3.11
+```
+
+Install in editable mode:
+```sh
+cd to/this/directory
+pip install -v -e .
+```
+
+Or
+```sh
+cd to/this/directory
+pip install -r requirements.txt
+pip install .
+```
