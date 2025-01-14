@@ -3,26 +3,27 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 
-import networkx as nx
 import pandas as pd
-from networkx.algorithms import isomorphism
 from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw
 from rdkit.Chem.rdchem import Mol
 
-from equus.diamine.iso import node_match, pure_mol_to_nx
 from equus.diamine.utils import read_smiles
 
 
 def mol_iso(mol1: Mol, mol2: Mol) -> bool:
-    return any(mol1.GetSubstructMatches(mol2)) and any(mol2.GetSubstructMatches(mol1))
+    return any(mol1.GetSubstructMatches(mol2, useChirality=True)) and any(
+        mol2.GetSubstructMatches(mol1, useChirality=True)
+    )
 
 
 _form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
 _n_bits = 2048
 _radius = 5
-_fpgen = AllChem.GetMorganGenerator(radius=_radius, fpSize=_n_bits)
+_fpgen = AllChem.GetMorganGenerator(
+    radius=_radius, fpSize=_n_bits, includeChirality=True
+)
 
 
 @dataclass
@@ -73,18 +74,18 @@ class Molecules:
         self.mol_form_dict[formula].append(i)
         self.n += 1
 
-    def search(self, smi: str, verbose=False) -> tuple[bool, str]:
-        """
+    def search(self, smi: str, verbose=False) -> tuple[bool, str, str]:
+        r"""
         Returns:
-        True, name if molecule is found.
-        False, '' if not found.
+        True, name, smi if molecule is found.
+        False, "", "" if not found.
         """
 
         # naive smiles matching
         smi = Chem.CanonSmiles(smi)
         if smi in self.smiles:
             i = self.smiles.index(smi)
-            return True, self.names[i]
+            return True, self.names[i], self.smiles[i]
 
         if verbose:
             print(
@@ -95,7 +96,7 @@ class Molecules:
         mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
         formula = _form(mol)
         if formula not in self.mol_form_dict:
-            return False, ""
+            return False, "", ""
 
         if verbose:
             print(
@@ -111,7 +112,7 @@ class Molecules:
             if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) > 0.999
         ]
         if len(candidates) == 0:
-            return False, ""
+            return False, "", ""
 
         if verbose:
             print(
@@ -119,24 +120,15 @@ class Molecules:
             )
             print("Number of candidates:", len(candidates))
 
-        # this_graph = pure_mol_to_nx(mol)
-        # for i in candidates:
-        #     ref_graph = pure_mol_to_nx(self.mols[i])
-        #     if nx.fast_could_be_isomorphic(this_graph, ref_graph):
-        #         if isomorphism.GraphMatcher(
-        #             this_graph, ref_graph, node_match=node_match
-        #         ).is_isomorphic():
-        #             return True, self.names[i]
-
         # Note: this is slightly (~15%) faster than the networkx approach
         for i in candidates:
             ref_mol = read_smiles(
                 self.smiles[i], no_aromatic_flags=False, hydrogens=True
             )
             if mol_iso(mol, ref_mol):
-                return True, self.names[i]
+                return True, self.names[i], self.smiles[i]
 
-        return False, ""
+        return False, "", ""
 
     @staticmethod
     def from_csv(
