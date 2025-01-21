@@ -6,23 +6,43 @@ from dataclasses import dataclass
 import pandas as pd
 from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem, Draw
+from rdkit.Chem import AllChem, Draw, rdmolops
 from rdkit.Chem.rdchem import Mol
 
-from equus.diamine.utils import read_smiles
 
+def mol_isomorphism(mol1: Mol, mol2: Mol, use_stereo: bool = False) -> bool:
+    r"""
+    This should be used as a last resort, as it is slow.
+    Assumes the two molecules have the same molecular formula, the same Morgan fingerprint.
+    To prioritize speed over absolute accuracy, this function follows the following steps:
+    1. Check if the canonical SMILES strings are the same.
+    2. Check if the InChI strings are the same.
+    3. Check if the two molecules are subgraphs of each other.
 
-def mol_iso(mol1: Mol, mol2: Mol) -> bool:
-    return any(mol1.GetSubstructMatches(mol2, useChirality=True)) and any(
-        mol2.GetSubstructMatches(mol1, useChirality=True)
+    Note: It is unclear if two stereoisomers can have the same canonical SMILES string or InChI string.
+    """
+
+    canon_match = Chem.CanonSmiles(Chem.MolToSmiles(mol1)) == Chem.CanonSmiles(
+        Chem.MolToSmiles(mol2)
+    )
+    if not canon_match:
+        return False
+    inchi_match = Chem.MolToInchi(mol1) == Chem.MolToInchi(mol2)
+    if not inchi_match:
+        return False
+    return any(mol1.GetSubstructMatches(mol2, useChirality=use_stereo)) and any(
+        mol2.GetSubstructMatches(mol1, useChirality=use_stereo)
     )
 
 
 _form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
 _n_bits = 2048
 _radius = 5
-_fpgen = AllChem.GetMorganGenerator(
+_fpgen_stereo = AllChem.GetMorganGenerator(
     radius=_radius, fpSize=_n_bits, includeChirality=True
+)
+_fpgen = AllChem.GetMorganGenerator(
+    radius=_radius, fpSize=_n_bits, includeChirality=False
 )
 
 
@@ -36,19 +56,23 @@ class Molecules:
 
     names: list[str]
     smiles: list[str]
+    use_stereo: bool = False
 
     def __post_init__(self):
-        self.mols = [
-            read_smiles(smiles_string=smi, no_aromatic_flags=False, hydrogens=True)
-            for smi in self.smiles
-        ]
+        self.smiles = [Chem.CanonSmiles(smi) for smi in self.smiles]
+        self.mols = [rdmolops.AddHs(Chem.MolFromSmiles(smi)) for smi in self.smiles]
 
         self.mol_form_dict = defaultdict(list)
         for i, mol in enumerate(self.mols):
             formula = _form(mol)
             self.mol_form_dict[formula].append(i)
 
-        self.fps = [_fpgen.GetFingerprint(mol) for mol in self.mols]
+        if self.use_stereo:
+            self.fp_generator = _fpgen_stereo
+        else:
+            self.fp_generator = _fpgen
+
+        self.fps = [self.fp_generator.GetFingerprint(mol) for mol in self.mols]
         self.n = len(self.smiles)
 
     def __getitem__(self, i: int | str) -> tuple[str, str]:
@@ -65,11 +89,12 @@ class Molecules:
         )
 
     def add(self, name: str, smi: str):
+        smi = Chem.CanonSmiles(smi)
         self.names.append(name)
         self.smiles.append(smi)
-        mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
+        mol = rdmolops.AddHs(Chem.MolFromSmiles(smi))
         self.mols.append(mol)
-        self.fps.append(_fpgen.GetFingerprint(mol))
+        self.fps.append(self.fp_generator.GetFingerprint(mol))
         formula, i = _form(mol), self.n
         self.mol_form_dict[formula].append(i)
         self.n += 1
@@ -93,7 +118,7 @@ class Molecules:
             )
 
         # find candidates by molecular formula matching
-        mol = read_smiles(smi, no_aromatic_flags=False, hydrogens=True)
+        mol = rdmolops.AddHs(Chem.MolFromSmiles(smi))
         formula = _form(mol)
         if formula not in self.mol_form_dict:
             return False, "", ""
@@ -105,11 +130,11 @@ class Molecules:
 
         # filter the list of candidates by Tanimoto Similarity of Morgan fingerprints
         candidates = self.mol_form_dict[formula]
-        this_fp = _fpgen.GetFingerprint(mol)
+        this_fp = self.fp_generator.GetFingerprint(mol)
         candidates = [
             i
             for i in candidates
-            if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) > 0.999
+            if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) == 1.0
         ]
         if len(candidates) == 0:
             return False, "", ""
@@ -122,10 +147,8 @@ class Molecules:
 
         # Note: this is slightly (~15%) faster than the networkx approach
         for i in candidates:
-            ref_mol = read_smiles(
-                self.smiles[i], no_aromatic_flags=False, hydrogens=True
-            )
-            if mol_iso(mol, ref_mol):
+            ref_mol = rdmolops.AddHs(Chem.MolFromSmiles(self.smiles[i]))
+            if mol_isomorphism(mol, ref_mol, use_stereo=self.use_stereo):
                 return True, self.names[i], self.smiles[i]
 
         return False, "", ""
