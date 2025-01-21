@@ -10,29 +10,34 @@ from rdkit.Chem import AllChem, Draw, rdmolops
 from rdkit.Chem.rdchem import Mol
 
 
-def mol_isomorphism(mol1: Mol, mol2: Mol, use_stereo: bool = False) -> bool:
+def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 100) -> str:
     r"""
-    This should be used as a last resort, as it is slow.
-    Assumes the two molecules have the same molecular formula, the same Morgan fingerprint.
-    To prioritize speed over absolute accuracy, this function follows the following steps:
-    1. Check if the canonical SMILES strings are the same.
-    2. Check if the InChI strings are the same.
-    3. Check if the two molecules are subgraphs of each other.
+    A naive self-consistent method that does canonicalization of SMILES strings.
 
-    Note: It is unclear if two stereoisomers can have the same canonical SMILES string or InChI string.
+    Args:
+        smi: str, the SMILES string to be canonicalized.
+        verbose: bool, whether to print out the steps.
+        max_attempt: int, the maximum number of attempts to reach a canonical SMILES string.
+
+    Returns:
+        str, the canonicalized SMILES string.
     """
-
-    canon_match = Chem.CanonSmiles(Chem.MolToSmiles(mol1)) == Chem.CanonSmiles(
-        Chem.MolToSmiles(mol2)
-    )
-    if not canon_match:
-        return False
-    inchi_match = Chem.MolToInchi(mol1) == Chem.MolToInchi(mol2)
-    if not inchi_match:
-        return False
-    return any(mol1.GetSubstructMatches(mol2, useChirality=use_stereo)) and any(
-        mol2.GetSubstructMatches(mol1, useChirality=use_stereo)
-    )
+    counter = 0
+    while True:
+        new_smi = Chem.CanonSmiles(smi)
+        if counter >= max_attempt:
+            if verbose:
+                print(f"Reached the maximum number of attempts ({max_attempt}).")
+            smi = new_smi
+            break
+        if new_smi == smi:
+            break
+        else:
+            if verbose:
+                print(f"Oops, {smi} is not canonical. Let's try {new_smi}.")
+            smi = new_smi
+            counter += 1
+    return smi
 
 
 _form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
@@ -45,6 +50,73 @@ _fpgen = AllChem.GetMorganGenerator(
     radius=_radius, fpSize=_n_bits, includeChirality=False
 )
 
+# def chirality_match(mol1: Mol, mol2: Mol) -> bool:
+#     r"""
+#     Returns True if the chirality of the two molecules match.
+#     """
+#     matches = mol1.GetSubstructMatches(mol2)
+#     if len(matches) == 0:
+#         return False
+#     if len(matches) > 0:
+#         for match in matches:
+#             atom_tag_match = all(
+#                 mol1.GetAtomWithIdx(i).GetChiralTag() == mol2.GetAtomWithIdx(i).GetChiralTag()
+#                 for i in match
+#             )
+#             if atom_tag_match:
+#                 bond_tag_match = True
+#                 for bond1 in mol1.GetBonds():
+#                     i, j = bond1.GetBeginAtomIdx(), bond1.GetEndAtomIdx()
+#                     i_2, j_2 = match[i], match[j]
+#                     bond2 = mol2.GetBondBetweenAtoms(i_2, j_2)
+#                     if bond2 is None:
+#                         bond_tag_match = False
+#                         break
+#                     if bond1.GetStereo() != bond2.GetStereo():
+#                         bond_tag_match = False
+#                         break
+#                 if atom_tag_match and bond_tag_match:
+#                     return True
+#     return False
+
+
+def mol_isomorphism(
+    mol1: Mol, mol2: Mol, use_stereo: bool = True, patience: int = 3
+) -> bool:
+    r"""
+    This should be used as a last resort, as it is slow.
+    Assumes the two molecules have the same molecular formula, the same Morgan fingerprint.
+    To prioritize speed over absolute accuracy, this function follows the following steps:
+    1. Check if the canonical SMILES strings are the same.
+    2. For the special scenario where Chem.CanonSmiles demonstrates cyclic behavior, tries to repeat step 1 for a few times (<= patience).
+    """
+
+    formular_match = _form(mol1) == _form(mol2)
+    if not formular_match:
+        return False
+
+    canon_smi1 = canonicalize_smiles(Chem.MolToSmiles(mol1))
+    canon_smi2 = canonicalize_smiles(Chem.MolToSmiles(mol2))
+
+    canon_match = canon_smi1 == canon_smi2
+    if canon_match:
+        return True
+
+    counter = 0
+    while counter < patience:
+        if canon_smi1 == canon_smi2:
+            return True
+        canon_smi1 = Chem.CanonSmiles(canon_smi1)
+        counter += 1
+    while counter < patience:
+        if canon_smi1 == canon_smi2:
+            return True
+        canon_smi2 = Chem.CanonSmiles(canon_smi2)
+        counter += 1
+
+    return False
+    # return mol1.HasSubstructMatch(mol2, useChirality=use_stereo) and mol2.HasSubstructMatch(mol1, useChirality=use_stereo)
+
 
 @dataclass
 class Molecules:
@@ -56,10 +128,10 @@ class Molecules:
 
     names: list[str]
     smiles: list[str]
-    use_stereo: bool = False
+    use_stereo: bool = True
 
     def __post_init__(self):
-        self.smiles = [Chem.CanonSmiles(smi) for smi in self.smiles]
+        self.smiles = [canonicalize_smiles(smi) for smi in self.smiles]
         self.mols = [rdmolops.AddHs(Chem.MolFromSmiles(smi)) for smi in self.smiles]
 
         self.mol_form_dict = defaultdict(list)
@@ -89,7 +161,7 @@ class Molecules:
         )
 
     def add(self, name: str, smi: str):
-        smi = Chem.CanonSmiles(smi)
+        smi = canonicalize_smiles(smi)
         self.names.append(name)
         self.smiles.append(smi)
         mol = rdmolops.AddHs(Chem.MolFromSmiles(smi))
@@ -107,7 +179,7 @@ class Molecules:
         """
 
         # naive smiles matching
-        smi = Chem.CanonSmiles(smi)
+        smi = canonicalize_smiles(smi)
         if smi in self.smiles:
             i = self.smiles.index(smi)
             return True, self.names[i], self.smiles[i]
@@ -155,20 +227,29 @@ class Molecules:
 
     @staticmethod
     def from_csv(
-        filename: str, name_col_id: int = 0, smiles_col_id: int = 1
+        filename: str,
+        name_col_id: int = 0,
+        smiles_col_id: int = 1,
+        use_stereo: bool = True,
     ) -> Molecules:
         df = pd.read_csv(filename)
         return Molecules.from_df(
-            df=df, name_col_id=name_col_id, smiles_col_id=smiles_col_id
+            df=df,
+            name_col_id=name_col_id,
+            smiles_col_id=smiles_col_id,
+            use_stereo=use_stereo,
         )
 
     @staticmethod
     def from_df(
-        df: DataFrame, name_col_id: int = 0, smiles_col_id: int = 1
+        df: DataFrame,
+        name_col_id: int = 0,
+        smiles_col_id: int = 1,
+        use_stereo: bool = True,
     ) -> Molecules:
         names = list(df.values[:, name_col_id])
         smiles = list(df.values[:, smiles_col_id])
-        return Molecules(names, smiles)
+        return Molecules(names, smiles, use_stereo=use_stereo)
 
     def to_df(self, name_col: str = "name", smiles_col: str = "SMILES") -> DataFrame:
         df = pd.DataFrame(data={name_col: self.names, smiles_col: self.smiles})
