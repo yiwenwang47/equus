@@ -2,12 +2,34 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from multiprocessing import Process, Queue
 
 import pandas as pd
 from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw, rdmolops
 from rdkit.Chem.rdchem import Mol
+
+
+def _has_substruct_match(q: Queue, mol: Chem.Mol, pattern: Chem.Mol, useChirality=True):
+    q.put(mol.HasSubstructMatch(pattern, useChirality=useChirality))
+
+
+def _time_out_mol_isomorphism_stereo(
+    mol: Chem.Mol, pattern: Chem.Mol, patience: float = 2.0
+):
+    q = Queue()
+    p = Process(target=_has_substruct_match, args=(q, mol, pattern, True))
+    p.start()
+    p.join(timeout=patience)
+    res = None
+    if p.exitcode is None:
+        p.terminate()
+    else:
+        res = q.get()
+    if res is None:
+        return False
+    return res
 
 
 def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 100) -> str:
@@ -81,14 +103,16 @@ _fpgen = AllChem.GetMorganGenerator(
 
 
 def mol_isomorphism(
-    mol1: Mol, mol2: Mol, use_stereo: bool = True, patience: int = 3
+    mol1: Mol, mol2: Mol, use_stereo: bool = True, patience: float = 2.0
 ) -> bool:
     r"""
     This should be used as a last resort, as it is slow.
     Assumes the two molecules have the same molecular formula, the same Morgan fingerprint.
     To prioritize speed over absolute accuracy, this function follows the following steps:
     1. Check if the canonical SMILES strings are the same.
-    2. For the special scenario where Chem.CanonSmiles demonstrates cyclic behavior, tries to repeat step 1 for a few times (<= patience).
+    2. Substructure matching.
+
+    When stereochemistry is considered, the function uses a time-out mechanism to avoid hanging.
     """
 
     formular_match = _form(mol1) == _form(mol2)
@@ -102,20 +126,13 @@ def mol_isomorphism(
     if canon_match:
         return True
 
-    counter = 0
-    while counter < patience:
-        if canon_smi1 == canon_smi2:
-            return True
-        canon_smi1 = Chem.CanonSmiles(canon_smi1)
-        counter += 1
-    while counter < patience:
-        if canon_smi1 == canon_smi2:
-            return True
-        canon_smi2 = Chem.CanonSmiles(canon_smi2)
-        counter += 1
+    if use_stereo:
+        return _time_out_mol_isomorphism_stereo(
+            mol1, mol2, patience=patience
+        ) and _time_out_mol_isomorphism_stereo(mol2, mol1, patience=patience)
 
-    return False
-    # return mol1.HasSubstructMatch(mol2, useChirality=use_stereo) and mol2.HasSubstructMatch(mol1, useChirality=use_stereo)
+    else:
+        return mol1.HasSubstructMatch(mol2) and mol2.HasSubstructMatch(mol1)
 
 
 @dataclass
@@ -129,6 +146,7 @@ class Molecules:
     names: list[str]
     smiles: list[str]
     use_stereo: bool = True
+    patience: float = 2.0
 
     def __post_init__(self):
         self.smiles = [canonicalize_smiles(smi) for smi in self.smiles]
@@ -220,7 +238,9 @@ class Molecules:
         # Note: this is slightly (~15%) faster than the networkx approach
         for i in candidates:
             ref_mol = rdmolops.AddHs(Chem.MolFromSmiles(self.smiles[i]))
-            if mol_isomorphism(mol, ref_mol, use_stereo=self.use_stereo):
+            if mol_isomorphism(
+                mol, ref_mol, use_stereo=self.use_stereo, patience=self.patience
+            ):
                 return True, self.names[i], self.smiles[i]
 
         return False, "", ""
