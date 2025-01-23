@@ -38,7 +38,7 @@ def _time_out_mol_isomorphism_stereo(
     return res
 
 
-def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 100) -> str:
+def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 3) -> str:
     r"""
     A naive self-consistent method that does canonicalization of SMILES strings.
 
@@ -78,38 +78,9 @@ _fpgen = AllChem.GetMorganGenerator(
     radius=_radius, fpSize=_n_bits, includeChirality=False
 )
 
-# def chirality_match(mol1: Mol, mol2: Mol) -> bool:
-#     r"""
-#     Returns True if the chirality of the two molecules match.
-#     """
-#     matches = mol1.GetSubstructMatches(mol2)
-#     if len(matches) == 0:
-#         return False
-#     if len(matches) > 0:
-#         for match in matches:
-#             atom_tag_match = all(
-#                 mol1.GetAtomWithIdx(i).GetChiralTag() == mol2.GetAtomWithIdx(i).GetChiralTag()
-#                 for i in match
-#             )
-#             if atom_tag_match:
-#                 bond_tag_match = True
-#                 for bond1 in mol1.GetBonds():
-#                     i, j = bond1.GetBeginAtomIdx(), bond1.GetEndAtomIdx()
-#                     i_2, j_2 = match[i], match[j]
-#                     bond2 = mol2.GetBondBetweenAtoms(i_2, j_2)
-#                     if bond2 is None:
-#                         bond_tag_match = False
-#                         break
-#                     if bond1.GetStereo() != bond2.GetStereo():
-#                         bond_tag_match = False
-#                         break
-#                 if atom_tag_match and bond_tag_match:
-#                     return True
-#     return False
-
 
 def mol_isomorphism(
-    mol1: Mol, mol2: Mol, use_stereo: bool = True, patience: float = 2.0
+    mol1: Mol, mol2: Mol, use_stereo: bool = True, patience: float = 0.5
 ) -> bool:
     r"""
     This should be used as a last resort, as it is slow.
@@ -151,7 +122,7 @@ class Molecules:
     names: list[str]
     smiles: list[str]
     use_stereo: bool = True
-    patience: float = 2.0
+    patience: float = 0.5
 
     def __post_init__(self):
         self.smiles = [canonicalize_smiles(smi) for smi in self.smiles]
