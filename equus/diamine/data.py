@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
+from typing import Optional
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -10,6 +11,8 @@ from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw, rdmolops
 from rdkit.Chem.rdchem import Mol
 from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+
+Chem.SetUseLegacyStereoPerception(False)
 
 from equus.diamine.iso import nx_isomorphism, pure_mol_to_nx
 
@@ -38,36 +41,6 @@ from equus.diamine.iso import nx_isomorphism, pure_mol_to_nx
 #     return res
 
 
-# def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 3) -> str:
-#     r"""
-#     A naive self-consistent method that does canonicalization of SMILES strings.
-
-#     Args:
-#         smi: str, the SMILES string to be canonicalized.
-#         verbose: bool, whether to print out the steps.
-#         max_attempt: int, the maximum number of attempts to reach a canonical SMILES string.
-
-#     Returns:
-#         str, the canonicalized SMILES string.
-#     """
-#     counter = 0
-#     while True:
-#         new_smi = Chem.CanonSmiles(smi)
-#         if counter >= max_attempt:
-#             if verbose:
-#                 print(f"Reached the maximum number of attempts ({max_attempt}).")
-#             smi = new_smi
-#             break
-#         if new_smi == smi:
-#             break
-#         else:
-#             if verbose:
-#                 print(f"Oops, {smi} is not canonical. Let's try {new_smi}.")
-#             smi = new_smi
-#             counter += 1
-#     return smi
-
-
 _form = lambda mol: CalcMolFormula(mol)
 _n_bits = 2048
 _radius = 5
@@ -79,7 +52,6 @@ _fpgen = AllChem.GetMorganGenerator(
 )
 
 
-@dataclass
 class Molecules:
 
     """
@@ -87,12 +59,9 @@ class Molecules:
     Has a search method.
     """
 
-    names: list[str]
-    smiles: list[str]
-    use_stereo: bool = True
-
-    def __post_init__(self):
-        self.smiles = [Chem.CanonSmiles(smi) for smi in self.smiles]
+    def __init__(self, names: list[str] = [], smiles: list[str] = []):
+        self.names = names
+        self.smiles = [Chem.CanonSmiles(smi) for smi in smiles]
         self.mols = [Chem.MolFromSmiles(smi) for smi in self.smiles]
 
         self.mol_form_dict = defaultdict(list)
@@ -100,12 +69,13 @@ class Molecules:
             formula = _form(mol)
             self.mol_form_dict[formula].append(i)
 
-        if self.use_stereo:
-            self.fp_generator = _fpgen_stereo
-        else:
-            self.fp_generator = _fpgen
+        self.fp_generator = _fpgen
+        self.fp_generator_stereo = _fpgen_stereo
 
         self.fps = [self.fp_generator.GetFingerprint(mol) for mol in self.mols]
+        self.fps_stereo = [
+            self.fp_generator_stereo.GetFingerprint(mol) for mol in self.mols
+        ]
         self.n = len(self.smiles)
         self.graphs = [pure_mol_to_nx(mol) for mol in self.mols]
 
@@ -117,23 +87,30 @@ class Molecules:
     def __len__(self) -> int:
         return self.n
 
+    def __repr__(self) -> str:
+        return f"A pool containing {self.n} molecules."
+
     def head(self, k: int = 10):
         return Draw.MolsToGridImage(
             mols=[Chem.MolFromSmiles(smi) for smi in self.smiles[:k]]
         )
 
     def add(self, name: str, smi: str):
+        smi = Chem.CanonSmiles(smi)
         self.names.append(name)
         self.smiles.append(smi)
         mol = Chem.MolFromSmiles(smi)
         self.mols.append(mol)
         self.fps.append(self.fp_generator.GetFingerprint(mol))
+        self.fps_stereo.append(self.fp_generator_stereo.GetFingerprint(mol))
         formula, i = _form(mol), self.n
         self.mol_form_dict[formula].append(i)
         self.graphs.append(pure_mol_to_nx(mol))
         self.n += 1
 
-    def search(self, smi: str, verbose=False) -> tuple[bool, str, str]:
+    def search(
+        self, smi: str, verbose=False, use_stereo: bool = True
+    ) -> Optional[list]:
         r"""
         Returns:
         True, name, smi if molecule is found.
@@ -142,9 +119,10 @@ class Molecules:
 
         # naive smiles matching
         smi = Chem.CanonSmiles(smi)
-        if smi in self.smiles:
-            i = self.smiles.index(smi)
-            return True, self.names[i], self.smiles[i]
+        if use_stereo:
+            if smi in self.smiles:
+                i = self.smiles.index(smi)
+                return [(self.names[i], self.smiles[i])]
 
         if verbose:
             print(
@@ -155,7 +133,7 @@ class Molecules:
         mol = Chem.MolFromSmiles(smi)
         formula = _form(mol)
         if formula not in self.mol_form_dict:
-            return False, "", ""
+            return None
 
         if verbose:
             print(
@@ -164,14 +142,24 @@ class Molecules:
 
         # filter the list of candidates by Tanimoto Similarity of Morgan fingerprints
         candidates = self.mol_form_dict[formula]
-        this_fp = self.fp_generator.GetFingerprint(mol)
-        candidates = [
-            i
-            for i in candidates
-            if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) == 1.0
-        ]
+
+        if use_stereo:
+            this_fp = self.fp_generator_stereo.GetFingerprint(mol)
+            candidates = [
+                i
+                for i in candidates
+                if DataStructs.TanimotoSimilarity(self.fps_stereo[i], this_fp) == 1.0
+            ]
+        else:
+            this_fp = self.fp_generator.GetFingerprint(mol)
+            candidates = [
+                i
+                for i in candidates
+                if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) == 1.0
+            ]
+
         if len(candidates) == 0:
-            return False, "", ""
+            return None
 
         if verbose:
             print(
@@ -179,10 +167,12 @@ class Molecules:
             )
             print("Number of candidates:", len(candidates))
 
+        # final results filtered by isomorphism
+        results = []
         this_graph = pure_mol_to_nx(mol)
         for i in candidates:
             ref_mol = Chem.MolFromSmiles(self.smiles[i])
-            if self.use_stereo:
+            if use_stereo:
                 ref_graph = self.graphs[i]
                 result = nx_isomorphism(
                     this_graph, ref_graph
@@ -192,9 +182,11 @@ class Molecules:
                     mol
                 )
             if result:
-                return True, self.names[i], self.smiles[i]
-
-        return False, "", ""
+                return results.append((self.names[i], self.smiles[i]))
+        if len(results) > 0:
+            return results
+        else:
+            return None
 
     @staticmethod
     def from_csv(
