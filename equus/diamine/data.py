@@ -9,66 +9,66 @@ from pandas.core.frame import DataFrame
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw, rdmolops
 from rdkit.Chem.rdchem import Mol
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula
 
 from equus.diamine.iso import nx_isomorphism, pure_mol_to_nx
 
-
-def _has_substruct_match(q: Queue, mol: Chem.Mol, pattern: Chem.Mol, useChirality=True):
-    q.put(mol.HasSubstructMatch(pattern, useChirality=useChirality))
-
-
-def _time_out_mol_isomorphism_stereo(
-    mol: Chem.Mol, pattern: Chem.Mol, patience: float = 0.5
-):
-    r"""
-    A time-out mechanism for the HasSubstructMatch check.
-
-    Returns None if the process is terminated after reaching the time limit (patience).
-
-    """
-    q = Queue()
-    p = Process(target=_has_substruct_match, args=(q, mol, pattern, True))
-    p.start()
-    p.join(timeout=patience)
-    res = None
-    if p.exitcode is None:
-        p.terminate()
-    else:
-        res = q.get()
-    return res
+# def _has_substruct_match(q: Queue, mol: Chem.Mol, pattern: Chem.Mol, useChirality=True):
+#     q.put(mol.HasSubstructMatch(pattern, useChirality=useChirality))
 
 
-def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 3) -> str:
-    r"""
-    A naive self-consistent method that does canonicalization of SMILES strings.
+# def _time_out_mol_isomorphism_stereo(
+#     mol: Chem.Mol, pattern: Chem.Mol, patience: float = 0.5
+# ):
+#     r"""
+#     A time-out mechanism for the HasSubstructMatch check.
 
-    Args:
-        smi: str, the SMILES string to be canonicalized.
-        verbose: bool, whether to print out the steps.
-        max_attempt: int, the maximum number of attempts to reach a canonical SMILES string.
+#     Returns None if the process is terminated after reaching the time limit (patience).
 
-    Returns:
-        str, the canonicalized SMILES string.
-    """
-    counter = 0
-    while True:
-        new_smi = Chem.CanonSmiles(smi)
-        if counter >= max_attempt:
-            if verbose:
-                print(f"Reached the maximum number of attempts ({max_attempt}).")
-            smi = new_smi
-            break
-        if new_smi == smi:
-            break
-        else:
-            if verbose:
-                print(f"Oops, {smi} is not canonical. Let's try {new_smi}.")
-            smi = new_smi
-            counter += 1
-    return smi
+#     """
+#     q = Queue()
+#     p = Process(target=_has_substruct_match, args=(q, mol, pattern, True))
+#     p.start()
+#     p.join(timeout=patience)
+#     res = None
+#     if p.exitcode is None:
+#         p.terminate()
+#     else:
+#         res = q.get()
+#     return res
 
 
-_form = lambda mol: Chem.rdMolDescriptors.CalcMolFormula(mol)
+# def canonicalize_smiles(smi: str, verbose: bool = False, max_attempt: int = 3) -> str:
+#     r"""
+#     A naive self-consistent method that does canonicalization of SMILES strings.
+
+#     Args:
+#         smi: str, the SMILES string to be canonicalized.
+#         verbose: bool, whether to print out the steps.
+#         max_attempt: int, the maximum number of attempts to reach a canonical SMILES string.
+
+#     Returns:
+#         str, the canonicalized SMILES string.
+#     """
+#     counter = 0
+#     while True:
+#         new_smi = Chem.CanonSmiles(smi)
+#         if counter >= max_attempt:
+#             if verbose:
+#                 print(f"Reached the maximum number of attempts ({max_attempt}).")
+#             smi = new_smi
+#             break
+#         if new_smi == smi:
+#             break
+#         else:
+#             if verbose:
+#                 print(f"Oops, {smi} is not canonical. Let's try {new_smi}.")
+#             smi = new_smi
+#             counter += 1
+#     return smi
+
+
+_form = lambda mol: CalcMolFormula(mol)
 _n_bits = 2048
 _radius = 5
 _fpgen_stereo = AllChem.GetMorganGenerator(
@@ -77,38 +77,6 @@ _fpgen_stereo = AllChem.GetMorganGenerator(
 _fpgen = AllChem.GetMorganGenerator(
     radius=_radius, fpSize=_n_bits, includeChirality=False
 )
-
-
-def mol_isomorphism(
-    mol1: Mol, mol2: Mol, use_stereo: bool = True, patience: float = 0.5
-) -> bool:
-    r"""
-    This should be used as a last resort, as it is slow.
-    Assumes the two molecules have the same molecular formula, the same Morgan fingerprint.
-    To prioritize speed over absolute accuracy, this function follows the following steps:
-    1. Check if the canonical SMILES strings are the same.
-    2. Substructure matching.
-    3. When substructure matching times out (use_stereo=True), return None.
-    """
-
-    formular_match = _form(mol1) == _form(mol2)
-    if not formular_match:
-        return False
-
-    canon_smi1 = canonicalize_smiles(Chem.MolToSmiles(mol1))
-    canon_smi2 = canonicalize_smiles(Chem.MolToSmiles(mol2))
-
-    canon_match = canon_smi1 == canon_smi2
-    if canon_match:
-        return True
-
-    if use_stereo:
-        return _time_out_mol_isomorphism_stereo(
-            mol1, mol2, patience=patience
-        ) and _time_out_mol_isomorphism_stereo(mol2, mol1, patience=patience)
-
-    else:
-        return mol1.HasSubstructMatch(mol2) and mol2.HasSubstructMatch(mol1)
 
 
 @dataclass
@@ -122,11 +90,10 @@ class Molecules:
     names: list[str]
     smiles: list[str]
     use_stereo: bool = True
-    patience: float = 0.5
 
     def __post_init__(self):
-        self.smiles = [canonicalize_smiles(smi) for smi in self.smiles]
-        self.mols = [rdmolops.AddHs(Chem.MolFromSmiles(smi)) for smi in self.smiles]
+        self.smiles = [Chem.CanonSmiles(smi) for smi in self.smiles]
+        self.mols = [Chem.MolFromSmiles(smi) for smi in self.smiles]
 
         self.mol_form_dict = defaultdict(list)
         for i, mol in enumerate(self.mols):
@@ -156,10 +123,9 @@ class Molecules:
         )
 
     def add(self, name: str, smi: str):
-        smi = canonicalize_smiles(smi)
         self.names.append(name)
         self.smiles.append(smi)
-        mol = rdmolops.AddHs(Chem.MolFromSmiles(smi))
+        mol = Chem.MolFromSmiles(smi)
         self.mols.append(mol)
         self.fps.append(self.fp_generator.GetFingerprint(mol))
         formula, i = _form(mol), self.n
@@ -175,7 +141,7 @@ class Molecules:
         """
 
         # naive smiles matching
-        smi = canonicalize_smiles(smi)
+        smi = Chem.CanonSmiles(smi)
         if smi in self.smiles:
             i = self.smiles.index(smi)
             return True, self.names[i], self.smiles[i]
@@ -186,7 +152,7 @@ class Molecules:
             )
 
         # find candidates by molecular formula matching
-        mol = rdmolops.AddHs(Chem.MolFromSmiles(smi))
+        mol = Chem.MolFromSmiles(smi)
         formula = _form(mol)
         if formula not in self.mol_form_dict:
             return False, "", ""
@@ -215,13 +181,16 @@ class Molecules:
 
         this_graph = pure_mol_to_nx(mol)
         for i in candidates:
-            ref_mol = rdmolops.AddHs(Chem.MolFromSmiles(self.smiles[i]))
-            result = mol_isomorphism(
-                mol, ref_mol, use_stereo=self.use_stereo, patience=self.patience
-            )
-            if result is None:
+            ref_mol = Chem.MolFromSmiles(self.smiles[i])
+            if self.use_stereo:
                 ref_graph = self.graphs[i]
-                result = nx_isomorphism(this_graph, ref_graph)
+                result = nx_isomorphism(
+                    this_graph, ref_graph
+                )  # this seems to be much more accurate than mol1.HasSubstructMatch(mol2, useChirality=True)
+            else:
+                result = mol.HasSubstructMatch(ref_mol) and ref_mol.HasSubstructMatch(
+                    mol
+                )
             if result:
                 return True, self.names[i], self.smiles[i]
 

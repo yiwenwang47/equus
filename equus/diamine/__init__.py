@@ -7,7 +7,6 @@ from equus.diamine.generate import (
 from equus.diamine.iso import (
     find_unique_mols,
     find_unique_smiles,
-    mol_to_nx,
     node_match,
     pure_mol_to_nx,
 )

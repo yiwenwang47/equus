@@ -11,8 +11,8 @@ def pure_mol_to_nx(mol):
         G.add_node(
             atom.GetIdx(),
             atom=atom.GetAtomicNum(),
-            atom_stereo=atom.GetChiralTag(),
-            atom_hybrid=atom.GetHybridization(),
+            atom_stereo=str(atom.GetChiralTag()),
+            atom_hybrid=str(atom.GetHybridization()),
             atom_charge=atom.GetFormalCharge(),
             num_Hs=atom.GetTotalNumHs(),
             num_radical_electrons=atom.GetNumRadicalElectrons(),
@@ -22,18 +22,9 @@ def pure_mol_to_nx(mol):
             bond.GetBeginAtomIdx(),
             bond.GetEndAtomIdx(),
             order=bond.GetBondTypeAsDouble(),
-            bond_stereo=bond.GetStereo(),
+            bond_stereo=str(bond.GetStereo()),
         )
     return G
-
-
-# def mol_to_nx(mol):
-#     if sum(atom.GetImplicitValence() for atom in mol.GetAtoms()) > 0:
-#         mol_H = rdmolops.AddHs(mol)
-#     else:
-#         mol_H = mol
-#     G = pure_mol_to_nx(mol_H)
-#     return G
 
 
 def node_match(node1, node2):
