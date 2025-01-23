@@ -10,14 +10,22 @@ from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw, rdmolops
 from rdkit.Chem.rdchem import Mol
 
+from equus.diamine.iso import nx_isomorphism, pure_mol_to_nx
+
 
 def _has_substruct_match(q: Queue, mol: Chem.Mol, pattern: Chem.Mol, useChirality=True):
     q.put(mol.HasSubstructMatch(pattern, useChirality=useChirality))
 
 
 def _time_out_mol_isomorphism_stereo(
-    mol: Chem.Mol, pattern: Chem.Mol, patience: float = 2.0
+    mol: Chem.Mol, pattern: Chem.Mol, patience: float = 0.5
 ):
+    r"""
+    A time-out mechanism for the HasSubstructMatch check.
+
+    Returns None if the process is terminated after reaching the time limit (patience).
+
+    """
     q = Queue()
     p = Process(target=_has_substruct_match, args=(q, mol, pattern, True))
     p.start()
@@ -27,8 +35,6 @@ def _time_out_mol_isomorphism_stereo(
         p.terminate()
     else:
         res = q.get()
-    if res is None:
-        return False
     return res
 
 
@@ -111,8 +117,7 @@ def mol_isomorphism(
     To prioritize speed over absolute accuracy, this function follows the following steps:
     1. Check if the canonical SMILES strings are the same.
     2. Substructure matching.
-
-    When stereochemistry is considered, the function uses a time-out mechanism to avoid hanging.
+    3. When substructure matching times out (use_stereo=True), return None.
     """
 
     formular_match = _form(mol1) == _form(mol2)
@@ -164,6 +169,7 @@ class Molecules:
 
         self.fps = [self.fp_generator.GetFingerprint(mol) for mol in self.mols]
         self.n = len(self.smiles)
+        self.graphs = [pure_mol_to_nx(mol) for mol in self.mols]
 
     def __getitem__(self, i: int | str) -> tuple[str, str]:
         if type(i) == str:
@@ -187,6 +193,7 @@ class Molecules:
         self.fps.append(self.fp_generator.GetFingerprint(mol))
         formula, i = _form(mol), self.n
         self.mol_form_dict[formula].append(i)
+        self.graphs.append(pure_mol_to_nx(mol))
         self.n += 1
 
     def search(self, smi: str, verbose=False) -> tuple[bool, str, str]:
@@ -235,12 +242,16 @@ class Molecules:
             )
             print("Number of candidates:", len(candidates))
 
-        # Note: this is slightly (~15%) faster than the networkx approach
+        this_graph = pure_mol_to_nx(mol)
         for i in candidates:
             ref_mol = rdmolops.AddHs(Chem.MolFromSmiles(self.smiles[i]))
-            if mol_isomorphism(
+            result = mol_isomorphism(
                 mol, ref_mol, use_stereo=self.use_stereo, patience=self.patience
-            ):
+            )
+            if result is None:
+                ref_graph = self.graphs[i]
+                result = nx_isomorphism(this_graph, ref_graph)
+            if result:
                 return True, self.names[i], self.smiles[i]
 
         return False, "", ""

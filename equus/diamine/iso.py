@@ -5,24 +5,65 @@ from rdkit.Chem import rdmolops
 
 
 def pure_mol_to_nx(mol):
+    mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol))
     G = nx.Graph()
     for atom in mol.GetAtoms():
-        G.add_node(atom.GetIdx(), atom=atom.GetAtomicNum())
+        G.add_node(
+            atom.GetIdx(),
+            atom=atom.GetAtomicNum(),
+            atom_stereo=atom.GetChiralTag(),
+            atom_hybrid=atom.GetHybridization(),
+            atom_charge=atom.GetFormalCharge(),
+            num_Hs=atom.GetTotalNumHs(),
+            num_radical_electrons=atom.GetNumRadicalElectrons(),
+        )
     for bond in mol.GetBonds():
-        G.add_edge(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())
+        G.add_edge(
+            bond.GetBeginAtomIdx(),
+            bond.GetEndAtomIdx(),
+            order=bond.GetBondTypeAsDouble(),
+            bond_stereo=bond.GetStereo(),
+        )
     return G
 
 
-def mol_to_nx(mol):
-    if sum(atom.GetImplicitValence() for atom in mol.GetAtoms()) > 0:
-        mol_H = rdmolops.AddHs(mol)
-    else:
-        mol_H = mol
-    G = pure_mol_to_nx(mol_H)
-    return G
+# def mol_to_nx(mol):
+#     if sum(atom.GetImplicitValence() for atom in mol.GetAtoms()) > 0:
+#         mol_H = rdmolops.AddHs(mol)
+#     else:
+#         mol_H = mol
+#     G = pure_mol_to_nx(mol_H)
+#     return G
 
 
-node_match = lambda node1, node2: node1["atom"] == node2["atom"]
+def node_match(node1, node2):
+    if node1["atom"] != node2["atom"]:
+        return False
+    if node1["atom_stereo"] != node2["atom_stereo"]:
+        return False
+    if node1["atom_hybrid"] != node2["atom_hybrid"]:
+        return False
+    if node1["atom_charge"] != node2["atom_charge"]:
+        return False
+    if node1["num_Hs"] != node2["num_Hs"]:
+        return False
+    if node1["num_radical_electrons"] != node2["num_radical_electrons"]:
+        return False
+    return True
+
+
+def edge_match(edge1, edge2):
+    if edge1["order"] != edge2["order"]:
+        return False
+    if edge1["bond_stereo"] != edge2["bond_stereo"]:
+        return False
+    return True
+
+
+def nx_isomorphism(G1: nx.Graph, G2: nx.Graph) -> bool:
+    return isomorphism.GraphMatcher(
+        G1, G2, node_match=node_match, edge_match=edge_match
+    ).is_isomorphic()
 
 
 def find_unique_mols(list_of_mols):
