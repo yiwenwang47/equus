@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
-from multiprocessing import Process, Queue
 from typing import Optional
 
 import pandas as pd
@@ -52,16 +50,16 @@ _fpgen = AllChem.GetMorganGenerator(
 )
 
 
-class Molecules:
+class Molecules(object):
 
     """
     Molecule pool.
     Has a search method.
     """
 
-    def __init__(self, names: list[str] = [], smiles: list[str] = []):
-        self.names = names
-        self.smiles = [Chem.CanonSmiles(smi) for smi in smiles]
+    def __init__(self, names: Optional[list] = None, smiles: Optional[list] = None):
+        self.names = names if names else []
+        self.smiles = [Chem.CanonSmiles(smi) for smi in smiles] if smiles else []
         self.mols = [Chem.MolFromSmiles(smi) for smi in self.smiles]
 
         self.mol_form_dict = defaultdict(list)
@@ -193,14 +191,12 @@ class Molecules:
         filename: str,
         name_col_id: int = 0,
         smiles_col_id: int = 1,
-        use_stereo: bool = True,
     ) -> Molecules:
         df = pd.read_csv(filename)
         return Molecules.from_df(
             df=df,
             name_col_id=name_col_id,
             smiles_col_id=smiles_col_id,
-            use_stereo=use_stereo,
         )
 
     @staticmethod
@@ -208,11 +204,10 @@ class Molecules:
         df: DataFrame,
         name_col_id: int = 0,
         smiles_col_id: int = 1,
-        use_stereo: bool = True,
     ) -> Molecules:
         names = list(df.values[:, name_col_id])
         smiles = list(df.values[:, smiles_col_id])
-        return Molecules(names, smiles, use_stereo=use_stereo)
+        return Molecules(names, smiles)
 
     def to_df(self, name_col: str = "name", smiles_col: str = "SMILES") -> DataFrame:
         df = pd.DataFrame(data={name_col: self.names, smiles_col: self.smiles})
