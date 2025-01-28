@@ -67,13 +67,8 @@ class Molecules(object):
             formula = _form(mol)
             self.mol_form_dict[formula].append(i)
 
-        self.fp_generator = _fpgen
-        self.fp_generator_stereo = _fpgen_stereo
-
-        self.fps = [self.fp_generator.GetFingerprint(mol) for mol in self.mols]
-        self.fps_stereo = [
-            self.fp_generator_stereo.GetFingerprint(mol) for mol in self.mols
-        ]
+        self.fps = [_fpgen.GetFingerprint(mol) for mol in self.mols]
+        self.fps_stereo = [_fpgen_stereo.GetFingerprint(mol) for mol in self.mols]
         self.n = len(self.smiles)
         self.graphs = [pure_mol_to_nx(mol) for mol in self.mols]
 
@@ -99,8 +94,8 @@ class Molecules(object):
         self.smiles.append(smi)
         mol = Chem.MolFromSmiles(smi)
         self.mols.append(mol)
-        self.fps.append(self.fp_generator.GetFingerprint(mol))
-        self.fps_stereo.append(self.fp_generator_stereo.GetFingerprint(mol))
+        self.fps.append(_fpgen.GetFingerprint(mol))
+        self.fps_stereo.append(_fpgen_stereo.GetFingerprint(mol))
         formula, i = _form(mol), self.n
         self.mol_form_dict[formula].append(i)
         self.graphs.append(pure_mol_to_nx(mol))
@@ -142,14 +137,14 @@ class Molecules(object):
         candidates = self.mol_form_dict[formula]
 
         if use_stereo:
-            this_fp = self.fp_generator_stereo.GetFingerprint(mol)
+            this_fp = _fpgen_stereo.GetFingerprint(mol)
             candidates = [
                 i
                 for i in candidates
                 if DataStructs.TanimotoSimilarity(self.fps_stereo[i], this_fp) == 1.0
             ]
         else:
-            this_fp = self.fp_generator.GetFingerprint(mol)
+            this_fp = _fpgen.GetFingerprint(mol)
             candidates = [
                 i
                 for i in candidates
