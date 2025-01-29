@@ -116,16 +116,17 @@ class Molecules(object):
             if smi in self.smiles:
                 i = self.smiles.index(smi)
                 return [(self.names[i], self.smiles[i])]
-
-        if verbose:
-            print(
-                "Did not find exact SMILES match. Moving on to molecular formula matching."
-            )
+            if verbose:
+                print(
+                    "Did not find exact SMILES match. Moving on to molecular formula matching."
+                )
 
         # find candidates by molecular formula matching
         mol = Chem.MolFromSmiles(smi)
         formula = _form(mol)
         if formula not in self.mol_form_dict:
+            if verbose:
+                print("No candidates found by molecular formula matching.")
             return None
 
         if verbose:
@@ -141,17 +142,19 @@ class Molecules(object):
             candidates = [
                 i
                 for i in candidates
-                if DataStructs.TanimotoSimilarity(self.fps_stereo[i], this_fp) == 1.0
+                if DataStructs.TanimotoSimilarity(self.fps_stereo[i], this_fp) >= 0.98
             ]
         else:
             this_fp = _fpgen.GetFingerprint(mol)
             candidates = [
                 i
                 for i in candidates
-                if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) == 1.0
+                if DataStructs.TanimotoSimilarity(self.fps[i], this_fp) >= 0.98
             ]
 
         if len(candidates) == 0:
+            if verbose:
+                print("No candidates found by fingerprint matching.")
             return None
 
         if verbose:
@@ -175,7 +178,7 @@ class Molecules(object):
                     mol
                 )
             if result:
-                return results.append((self.names[i], self.smiles[i]))
+                results.append((self.names[i], self.smiles[i]))
         if len(results) > 0:
             return results
         else:
