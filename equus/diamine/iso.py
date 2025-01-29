@@ -1,17 +1,22 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 from rdkit import Chem
+
+Chem.SetUseLegacyStereoPerception(False)
 from rdkit.Chem import rdmolops
 
 
 def pure_mol_to_nx(mol):
     mol = Chem.MolFromSmiles(Chem.MolToSmiles(mol))
+    chiral_tags = {atom.GetIdx(): "" for atom in mol.GetAtoms()}
+    for id, tag in Chem.FindMolChiralCenters(mol):
+        chiral_tags[id] = tag
     G = nx.Graph()
     for atom in mol.GetAtoms():
         G.add_node(
             atom.GetIdx(),
             atom=atom.GetAtomicNum(),
-            atom_stereo=str(atom.GetChiralTag()),
+            atom_stereo=chiral_tags[atom.GetIdx()],
             atom_hybrid=str(atom.GetHybridization()),
             atom_charge=atom.GetFormalCharge(),
             num_Hs=atom.GetTotalNumHs(),
