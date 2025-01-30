@@ -170,9 +170,19 @@ class Molecules(object):
             ref_mol = Chem.MolFromSmiles(self.smiles[i])
             if use_stereo:
                 ref_graph = self.graphs[i]
-                result = nx_isomorphism(
-                    this_graph, ref_graph
-                )  # this seems to be much more accurate than mol1.HasSubstructMatch(mol2, useChirality=True)
+                result = nx_isomorphism(this_graph, ref_graph)
+                # this seems to be much more accurate than mol1.HasSubstructMatch(mol2, useChirality=True)
+                # but fails when double bonds are labeled cis/trans instead of E/Z
+                # adding another layer
+                if result:
+                    another_result = mol.HasSubstructMatch(
+                        ref_mol, useChirality=True
+                    ) and ref_mol.HasSubstructMatch(mol, useChirality=True)
+                    if not another_result:
+                        result = False
+                # note: HasSubstructMatch fails to identify matches in complicated cases such as caged structures
+                # however, the key is to not allow different isomers to be identified as the same
+                # and allow some potential duplicates to slip through
             else:
                 result = mol.HasSubstructMatch(ref_mol) and ref_mol.HasSubstructMatch(
                     mol
